@@ -1,0 +1,946 @@
+ARM GAS  /tmp/ccud6YoL.s 			page 1
+
+
+   1              		.cpu cortex-m7
+   2              		.eabi_attribute 28, 1
+   3              		.eabi_attribute 20, 1
+   4              		.eabi_attribute 21, 1
+   5              		.eabi_attribute 23, 3
+   6              		.eabi_attribute 24, 1
+   7              		.eabi_attribute 25, 1
+   8              		.eabi_attribute 26, 1
+   9              		.eabi_attribute 30, 2
+  10              		.eabi_attribute 34, 1
+  11              		.eabi_attribute 18, 4
+  12              		.file	"usb_descriptors.c"
+  13              		.text
+  14              	.Ltext0:
+  15              		.cfi_sections	.debug_frame
+  16              		.section	.text.tud_descriptor_device_cb,"ax",%progbits
+  17              		.align	1
+  18              		.p2align 2,,3
+  19              		.global	tud_descriptor_device_cb
+  20              		.arch armv7e-m
+  21              		.syntax unified
+  22              		.thumb
+  23              		.thumb_func
+  24              		.fpu fpv5-d16
+  26              	tud_descriptor_device_cb:
+  27              	.LFB416:
+  28              		.file 1 "usb_descriptors.c"
+   1:usb_descriptors.c **** /*
+   2:usb_descriptors.c ****  * The MIT License (MIT)
+   3:usb_descriptors.c ****  *
+   4:usb_descriptors.c ****  * Copyright (c) 2019 Ha Thach (tinyusb.org)
+   5:usb_descriptors.c ****  *
+   6:usb_descriptors.c ****  * Permission is hereby granted, free of charge, to any person obtaining a copy
+   7:usb_descriptors.c ****  * of this software and associated documentation files (the "Software"), to deal
+   8:usb_descriptors.c ****  * in the Software without restriction, including without limitation the rights
+   9:usb_descriptors.c ****  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  10:usb_descriptors.c ****  * copies of the Software, and to permit persons to whom the Software is
+  11:usb_descriptors.c ****  * furnished to do so, subject to the following conditions:
+  12:usb_descriptors.c ****  *
+  13:usb_descriptors.c ****  * The above copyright notice and this permission notice shall be included in
+  14:usb_descriptors.c ****  * all copies or substantial portions of the Software.
+  15:usb_descriptors.c ****  *
+  16:usb_descriptors.c ****  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  17:usb_descriptors.c ****  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  18:usb_descriptors.c ****  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  19:usb_descriptors.c ****  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  20:usb_descriptors.c ****  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  21:usb_descriptors.c ****  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  22:usb_descriptors.c ****  * THE SOFTWARE.
+  23:usb_descriptors.c ****  *
+  24:usb_descriptors.c ****  */
+  25:usb_descriptors.c **** 
+  26:usb_descriptors.c **** #include "bsp/board_api.h"
+  27:usb_descriptors.c **** #include "tusb.h"
+  28:usb_descriptors.c **** #include "usb_descriptors.h"
+  29:usb_descriptors.c **** 
+  30:usb_descriptors.c **** /* A combination of interfaces must have a unique product id, since PC will save device driver afte
+ARM GAS  /tmp/ccud6YoL.s 			page 2
+
+
+  31:usb_descriptors.c ****  * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause syst
+  32:usb_descriptors.c ****  *
+  33:usb_descriptors.c ****  * Auto ProductID layout's Bitmap:
+  34:usb_descriptors.c ****  *   [MSB]         HID | MSC | CDC          [LSB]
+  35:usb_descriptors.c ****  */
+  36:usb_descriptors.c **** #define PID_MAP(itf, n) ((CFG_TUD_##itf) ? (1 << (n)) : 0)
+  37:usb_descriptors.c **** #define USB_PID         (0x4000 | PID_MAP(CDC, 0) | PID_MAP(MSC, 1) | PID_MAP(HID, 2) | PID_MAP(MID
+  38:usb_descriptors.c **** 
+  39:usb_descriptors.c **** //--------------------------------------------------------------------+
+  40:usb_descriptors.c **** // Device Descriptors
+  41:usb_descriptors.c **** //--------------------------------------------------------------------+
+  42:usb_descriptors.c **** static tusb_desc_device_t const desc_device = {
+  43:usb_descriptors.c ****   .bLength         = sizeof(tusb_desc_device_t),
+  44:usb_descriptors.c ****   .bDescriptorType = TUSB_DESC_DEVICE,
+  45:usb_descriptors.c ****   .bcdUSB          = 0x0200,
+  46:usb_descriptors.c ****   .bDeviceClass    = 0x00,
+  47:usb_descriptors.c ****   .bDeviceSubClass = 0x00,
+  48:usb_descriptors.c ****   .bDeviceProtocol = 0x00,
+  49:usb_descriptors.c ****   .bMaxPacketSize0 = CFG_TUD_ENDPOINT0_SIZE,
+  50:usb_descriptors.c **** 
+  51:usb_descriptors.c ****   .idVendor  = 0xCafe,
+  52:usb_descriptors.c ****   .idProduct = USB_PID,
+  53:usb_descriptors.c ****   .bcdDevice = 0x0100,
+  54:usb_descriptors.c **** 
+  55:usb_descriptors.c ****   .iManufacturer = 0x01,
+  56:usb_descriptors.c ****   .iProduct      = 0x02,
+  57:usb_descriptors.c ****   .iSerialNumber = 0x03,
+  58:usb_descriptors.c **** 
+  59:usb_descriptors.c ****   .bNumConfigurations = 0x01};
+  60:usb_descriptors.c **** 
+  61:usb_descriptors.c **** // Invoked when received GET DEVICE DESCRIPTOR
+  62:usb_descriptors.c **** // Application return pointer to descriptor
+  63:usb_descriptors.c **** uint8_t const *tud_descriptor_device_cb(void) {
+  29              		.loc 1 63 47 view -0
+  30              		.cfi_startproc
+  31              		@ args = 0, pretend = 0, frame = 0
+  32              		@ frame_needed = 0, uses_anonymous_args = 0
+  33              		@ link register save eliminated.
+  64:usb_descriptors.c ****   return (uint8_t const *)&desc_device;
+  34              		.loc 1 64 3 view .LVU1
+  65:usb_descriptors.c **** }
+  35              		.loc 1 65 1 is_stmt 0 view .LVU2
+  36 0000 0048     		ldr	r0, .L3
+  37 0002 7047     		bx	lr
+  38              	.L4:
+  39              		.align	2
+  40              	.L3:
+  41 0004 00000000 		.word	.LANCHOR0
+  42              		.cfi_endproc
+  43              	.LFE416:
+  45              		.section	.text.tud_hid_descriptor_report_cb,"ax",%progbits
+  46              		.align	1
+  47              		.p2align 2,,3
+  48              		.global	tud_hid_descriptor_report_cb
+  49              		.syntax unified
+  50              		.thumb
+  51              		.thumb_func
+ARM GAS  /tmp/ccud6YoL.s 			page 3
+
+
+  52              		.fpu fpv5-d16
+  54              	tud_hid_descriptor_report_cb:
+  55              	.LVL0:
+  56              	.LFB417:
+  66:usb_descriptors.c **** 
+  67:usb_descriptors.c **** //--------------------------------------------------------------------+
+  68:usb_descriptors.c **** // HID Report Descriptor
+  69:usb_descriptors.c **** //--------------------------------------------------------------------+
+  70:usb_descriptors.c **** 
+  71:usb_descriptors.c **** uint8_t const desc_hid_keyboard_report[] = {TUD_HID_REPORT_DESC_KEYBOARD()};
+  72:usb_descriptors.c **** 
+  73:usb_descriptors.c **** uint8_t const desc_hid_mouse_report[] = {TUD_HID_REPORT_DESC_MOUSE()};
+  74:usb_descriptors.c **** 
+  75:usb_descriptors.c **** // Invoked when received GET HID REPORT DESCRIPTOR
+  76:usb_descriptors.c **** // Application return pointer to descriptor
+  77:usb_descriptors.c **** // Descriptor contents must exist long enough for transfer to complete
+  78:usb_descriptors.c **** uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance) {
+  57              		.loc 1 78 63 is_stmt 1 view -0
+  58              		.cfi_startproc
+  59              		@ args = 0, pretend = 0, frame = 0
+  60              		@ frame_needed = 0, uses_anonymous_args = 0
+  61              		@ link register save eliminated.
+  79:usb_descriptors.c ****   return (instance == 0) ? desc_hid_keyboard_report : desc_hid_mouse_report;
+  62              		.loc 1 79 3 view .LVU4
+  63              		.loc 1 79 53 is_stmt 0 view .LVU5
+  64 0000 034A     		ldr	r2, .L8
+  65 0002 044B     		ldr	r3, .L8+4
+  80:usb_descriptors.c **** }
+  66              		.loc 1 80 1 view .LVU6
+  67 0004 0028     		cmp	r0, #0
+  68 0006 0CBF     		ite	eq
+  69 0008 1046     		moveq	r0, r2
+  70 000a 1846     		movne	r0, r3
+  71              	.LVL1:
+  72              		.loc 1 80 1 view .LVU7
+  73 000c 7047     		bx	lr
+  74              	.L9:
+  75 000e 00BF     		.align	2
+  76              	.L8:
+  77 0010 00000000 		.word	.LANCHOR1
+  78 0014 00000000 		.word	.LANCHOR2
+  79              		.cfi_endproc
+  80              	.LFE417:
+  82              		.section	.text.tud_descriptor_configuration_cb,"ax",%progbits
+  83              		.align	1
+  84              		.p2align 2,,3
+  85              		.global	tud_descriptor_configuration_cb
+  86              		.syntax unified
+  87              		.thumb
+  88              		.thumb_func
+  89              		.fpu fpv5-d16
+  91              	tud_descriptor_configuration_cb:
+  92              	.LVL2:
+  93              	.LFB418:
+  81:usb_descriptors.c **** 
+  82:usb_descriptors.c **** //--------------------------------------------------------------------+
+  83:usb_descriptors.c **** // Configuration Descriptor
+ARM GAS  /tmp/ccud6YoL.s 			page 4
+
+
+  84:usb_descriptors.c **** //--------------------------------------------------------------------+
+  85:usb_descriptors.c **** 
+  86:usb_descriptors.c **** #define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + 2 * TUD_HID_DESC_LEN)
+  87:usb_descriptors.c **** 
+  88:usb_descriptors.c **** #if CFG_TUSB_MCU == OPT_MCU_LPC175X_6X || CFG_TUSB_MCU == OPT_MCU_LPC177X_8X || CFG_TUSB_MCU == OPT
+  89:usb_descriptors.c **** // LPC 17xx and 40xx endpoint type (bulk/interrupt/iso) are fixed by its number
+  90:usb_descriptors.c **** // 1 Interrupt, 2 Bulk, 3 Iso, 4 Interrupt, 5 Bulk etc ...
+  91:usb_descriptors.c **** #define EPNUM_KEYBOARD 0x81
+  92:usb_descriptors.c **** #define EPNUM_MOUSE    0x84
+  93:usb_descriptors.c **** #else
+  94:usb_descriptors.c **** #define EPNUM_KEYBOARD 0x81
+  95:usb_descriptors.c **** #define EPNUM_MOUSE    0x82
+  96:usb_descriptors.c **** #endif
+  97:usb_descriptors.c **** 
+  98:usb_descriptors.c **** uint8_t const desc_configuration[] = {
+  99:usb_descriptors.c ****   // Config number, interface count, string index, total length, attribute, power in mA
+ 100:usb_descriptors.c ****   TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 
+ 101:usb_descriptors.c **** 
+ 102:usb_descriptors.c ****   // Interface number, string index, protocol, report descriptor len, EP In address, size & polling
+ 103:usb_descriptors.c ****   TUD_HID_DESCRIPTOR(
+ 104:usb_descriptors.c ****       ITF_NUM_KEYBOARD, 0, HID_ITF_PROTOCOL_KEYBOARD, sizeof(desc_hid_keyboard_report), EPNUM_KEYBO
+ 105:usb_descriptors.c ****       CFG_TUD_HID_EP_BUFSIZE, 10),
+ 106:usb_descriptors.c **** 
+ 107:usb_descriptors.c ****   // Interface number, string index, protocol, report descriptor len, EP In address, size & polling
+ 108:usb_descriptors.c ****   TUD_HID_DESCRIPTOR(
+ 109:usb_descriptors.c ****       ITF_NUM_MOUSE, 0, HID_ITF_PROTOCOL_MOUSE, sizeof(desc_hid_mouse_report), EPNUM_MOUSE, CFG_TUD
+ 110:usb_descriptors.c ****       10)};
+ 111:usb_descriptors.c **** 
+ 112:usb_descriptors.c **** // Invoked when received GET CONFIGURATION DESCRIPTOR
+ 113:usb_descriptors.c **** // Application return pointer to descriptor
+ 114:usb_descriptors.c **** // Descriptor contents must exist long enough for transfer to complete
+ 115:usb_descriptors.c **** uint8_t const *tud_descriptor_configuration_cb(uint8_t index) {
+  94              		.loc 1 115 63 is_stmt 1 view -0
+  95              		.cfi_startproc
+  96              		@ args = 0, pretend = 0, frame = 0
+  97              		@ frame_needed = 0, uses_anonymous_args = 0
+  98              		@ link register save eliminated.
+ 116:usb_descriptors.c ****   (void)index; // for multiple configurations
+  99              		.loc 1 116 3 view .LVU9
+ 117:usb_descriptors.c ****   return desc_configuration;
+ 100              		.loc 1 117 3 view .LVU10
+ 118:usb_descriptors.c **** }
+ 101              		.loc 1 118 1 is_stmt 0 view .LVU11
+ 102 0000 0048     		ldr	r0, .L11
+ 103              	.LVL3:
+ 104              		.loc 1 118 1 view .LVU12
+ 105 0002 7047     		bx	lr
+ 106              	.L12:
+ 107              		.align	2
+ 108              	.L11:
+ 109 0004 00000000 		.word	.LANCHOR3
+ 110              		.cfi_endproc
+ 111              	.LFE418:
+ 113              		.section	.rodata.tud_descriptor_string_cb.str1.4,"aMS",%progbits,1
+ 114              		.align	2
+ 115              	.LC0:
+ 116 0000 30313233 		.ascii	"0123456789ABCDEF\000"
+ARM GAS  /tmp/ccud6YoL.s 			page 5
+
+
+ 116      34353637 
+ 116      38394142 
+ 116      43444546 
+ 116      00
+ 117              		.section	.text.tud_descriptor_string_cb,"ax",%progbits
+ 118              		.align	1
+ 119              		.p2align 2,,3
+ 120              		.global	tud_descriptor_string_cb
+ 121              		.syntax unified
+ 122              		.thumb
+ 123              		.thumb_func
+ 124              		.fpu fpv5-d16
+ 126              	tud_descriptor_string_cb:
+ 127              	.LVL4:
+ 128              	.LFB419:
+ 119:usb_descriptors.c **** 
+ 120:usb_descriptors.c **** //--------------------------------------------------------------------+
+ 121:usb_descriptors.c **** // String Descriptors
+ 122:usb_descriptors.c **** //--------------------------------------------------------------------+
+ 123:usb_descriptors.c **** 
+ 124:usb_descriptors.c **** // String Descriptor Index
+ 125:usb_descriptors.c **** enum {
+ 126:usb_descriptors.c ****   STRID_LANGID = 0,
+ 127:usb_descriptors.c ****   STRID_MANUFACTURER,
+ 128:usb_descriptors.c ****   STRID_PRODUCT,
+ 129:usb_descriptors.c ****   STRID_SERIAL,
+ 130:usb_descriptors.c **** };
+ 131:usb_descriptors.c **** 
+ 132:usb_descriptors.c **** // array of pointer to string descriptors
+ 133:usb_descriptors.c **** static char const *string_desc_arr[] = {
+ 134:usb_descriptors.c ****   (const char[]){0x09, 0x04}, // 0: is supported language is English (0x0409)
+ 135:usb_descriptors.c ****   "TinyUSB",                  // 1: Manufacturer
+ 136:usb_descriptors.c ****   "TinyUSB Device",           // 2: Product
+ 137:usb_descriptors.c ****   NULL,                       // 3: Serials will use unique ID if possible
+ 138:usb_descriptors.c **** };
+ 139:usb_descriptors.c **** 
+ 140:usb_descriptors.c **** static uint16_t _desc_str[32 + 1];
+ 141:usb_descriptors.c **** 
+ 142:usb_descriptors.c **** // Invoked when received GET STRING DESCRIPTOR request
+ 143:usb_descriptors.c **** // Application return pointer to descriptor, whose contents must exist long enough for transfer to 
+ 144:usb_descriptors.c **** uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
+ 129              		.loc 1 144 74 is_stmt 1 view -0
+ 130              		.cfi_startproc
+ 131              		@ args = 0, pretend = 0, frame = 32
+ 132              		@ frame_needed = 0, uses_anonymous_args = 0
+ 145:usb_descriptors.c ****   (void)langid;
+ 133              		.loc 1 145 3 view .LVU14
+ 146:usb_descriptors.c ****   size_t chr_count;
+ 134              		.loc 1 146 3 view .LVU15
+ 147:usb_descriptors.c **** 
+ 148:usb_descriptors.c ****   switch (index) {
+ 135              		.loc 1 148 3 view .LVU16
+ 144:usb_descriptors.c ****   (void)langid;
+ 136              		.loc 1 144 74 is_stmt 0 view .LVU17
+ 137 0000 2DE9F043 		push	{r4, r5, r6, r7, r8, r9, lr}
+ 138              		.cfi_def_cfa_offset 28
+ 139              		.cfi_offset 4, -28
+ARM GAS  /tmp/ccud6YoL.s 			page 6
+
+
+ 140              		.cfi_offset 5, -24
+ 141              		.cfi_offset 6, -20
+ 142              		.cfi_offset 7, -16
+ 143              		.cfi_offset 8, -12
+ 144              		.cfi_offset 9, -8
+ 145              		.cfi_offset 14, -4
+ 146 0004 89B0     		sub	sp, sp, #36
+ 147              		.cfi_def_cfa_offset 64
+ 148              		.loc 1 148 3 view .LVU18
+ 149 0006 20B3     		cbz	r0, .L14
+ 150 0008 0328     		cmp	r0, #3
+ 151 000a 29D0     		beq	.L15
+ 152              	.LBB12:
+ 149:usb_descriptors.c ****     case STRID_LANGID:
+ 150:usb_descriptors.c ****       memcpy(&_desc_str[1], string_desc_arr[0], 2);
+ 151:usb_descriptors.c ****       chr_count = 1;
+ 152:usb_descriptors.c ****       break;
+ 153:usb_descriptors.c **** 
+ 154:usb_descriptors.c ****     case STRID_SERIAL: chr_count = board_usb_get_serial(_desc_str + 1, 32); break;
+ 155:usb_descriptors.c **** 
+ 156:usb_descriptors.c ****     default:
+ 157:usb_descriptors.c ****       // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.
+ 158:usb_descriptors.c ****       // https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-defined-usb-des
+ 159:usb_descriptors.c **** 
+ 160:usb_descriptors.c ****       if (!(index < sizeof(string_desc_arr) / sizeof(string_desc_arr[0]))) {
+ 153              		.loc 1 160 7 is_stmt 1 view .LVU19
+ 154              		.loc 1 160 10 is_stmt 0 view .LVU20
+ 155 000c 57D8     		bhi	.L23
+ 161:usb_descriptors.c ****         return NULL;
+ 162:usb_descriptors.c ****       }
+ 163:usb_descriptors.c **** 
+ 164:usb_descriptors.c ****       const char *str = string_desc_arr[index];
+ 156              		.loc 1 164 7 is_stmt 1 view .LVU21
+ 157              		.loc 1 164 19 is_stmt 0 view .LVU22
+ 158 000e 2F4B     		ldr	r3, .L29
+ 159 0010 53F82060 		ldr	r6, [r3, r0, lsl #2]
+ 160              	.LVL5:
+ 165:usb_descriptors.c **** 
+ 166:usb_descriptors.c ****       // Cap at max char
+ 167:usb_descriptors.c ****       chr_count = strlen(str);
+ 161              		.loc 1 167 7 is_stmt 1 view .LVU23
+ 162              		.loc 1 167 19 is_stmt 0 view .LVU24
+ 163 0014 3046     		mov	r0, r6
+ 164              	.LVL6:
+ 165              		.loc 1 167 19 view .LVU25
+ 166 0016 FFF7FEFF 		bl	strlen
+ 167              	.LVL7:
+ 168:usb_descriptors.c **** 
+ 169:usb_descriptors.c ****       size_t const max_count = sizeof(_desc_str) / sizeof(_desc_str[0]) - 1; // -1 for string type
+ 168              		.loc 1 169 7 is_stmt 1 view .LVU26
+ 170:usb_descriptors.c ****       if (chr_count > max_count) {
+ 169              		.loc 1 170 7 view .LVU27
+ 170 001a 2028     		cmp	r0, #32
+ 171 001c 0246     		mov	r2, r0
+ 172 001e 28BF     		it	cs
+ 173 0020 2022     		movcs	r2, #32
+ 174              	.LVL8:
+ARM GAS  /tmp/ccud6YoL.s 			page 7
+
+
+ 171:usb_descriptors.c ****         chr_count = max_count;
+ 172:usb_descriptors.c ****       }
+ 173:usb_descriptors.c **** 
+ 174:usb_descriptors.c ****       // Convert ASCII string into UTF-16
+ 175:usb_descriptors.c ****       for (size_t i = 0; i < chr_count; i++) {
+ 175              		.loc 1 175 7 view .LVU28
+ 176              	.LBB13:
+ 177              		.loc 1 175 12 view .LVU29
+ 178              		.loc 1 175 26 view .LVU30
+ 179              		.loc 1 175 7 is_stmt 0 view .LVU31
+ 180 0022 0028     		cmp	r0, #0
+ 181 0024 4DD0     		beq	.L24
+ 182 0026 2A4D     		ldr	r5, .L29+4
+ 183 0028 711E     		subs	r1, r6, #1
+ 184 002a 2846     		mov	r0, r5
+ 185              	.LVL9:
+ 186              	.L22:
+ 176:usb_descriptors.c ****         _desc_str[1 + i] = str[i];
+ 187              		.loc 1 176 9 is_stmt 1 discriminator 3 view .LVU32
+ 188 002c 0B46     		mov	r3, r1
+ 189              		.loc 1 176 31 is_stmt 0 discriminator 3 view .LVU33
+ 190 002e 11F8014F 		ldrb	r4, [r1, #1]!	@ zero_extendqisi2
+ 191              	.LVL10:
+ 175:usb_descriptors.c ****         _desc_str[1 + i] = str[i];
+ 192              		.loc 1 175 7 discriminator 3 view .LVU34
+ 193 0032 0233     		adds	r3, r3, #2
+ 194              	.LVL11:
+ 195              		.loc 1 176 31 discriminator 3 view .LVU35
+ 196 0034 20F8024F 		strh	r4, [r0, #2]!	@ movhi
+ 175:usb_descriptors.c ****         _desc_str[1 + i] = str[i];
+ 197              		.loc 1 175 41 is_stmt 1 discriminator 3 view .LVU36
+ 198              	.LVL12:
+ 175:usb_descriptors.c ****         _desc_str[1 + i] = str[i];
+ 199              		.loc 1 175 26 discriminator 3 view .LVU37
+ 175:usb_descriptors.c ****         _desc_str[1 + i] = str[i];
+ 200              		.loc 1 175 7 is_stmt 0 discriminator 3 view .LVU38
+ 201 0038 9B1B     		subs	r3, r3, r6
+ 202 003a 9A42     		cmp	r2, r3
+ 203 003c F6D8     		bhi	.L22
+ 204              	.LBE13:
+ 205              	.LBE12:
+ 177:usb_descriptors.c ****       }
+ 178:usb_descriptors.c ****       break;
+ 179:usb_descriptors.c ****   }
+ 180:usb_descriptors.c **** 
+ 181:usb_descriptors.c ****   // first byte is length (including header), second byte is string type
+ 182:usb_descriptors.c ****   _desc_str[0] = (uint16_t)((TUSB_DESC_STRING << 8) | (2 * chr_count + 2));
+ 206              		.loc 1 182 70 view .LVU39
+ 207 003e 531C     		adds	r3, r2, #1
+ 208 0040 5B00     		lsls	r3, r3, #1
+ 209              		.loc 1 182 18 view .LVU40
+ 210 0042 43F44073 		orr	r3, r3, #768
+ 211 0046 9BB2     		uxth	r3, r3
+ 212              	.LVL13:
+ 213              	.L17:
+ 214              		.loc 1 182 3 is_stmt 1 view .LVU41
+ 183:usb_descriptors.c **** 
+ARM GAS  /tmp/ccud6YoL.s 			page 8
+
+
+ 184:usb_descriptors.c ****   return _desc_str;
+ 215              		.loc 1 184 10 is_stmt 0 view .LVU42
+ 216 0048 2148     		ldr	r0, .L29+4
+ 182:usb_descriptors.c **** 
+ 217              		.loc 1 182 16 view .LVU43
+ 218 004a 2B80     		strh	r3, [r5]	@ movhi
+ 219              		.loc 1 184 3 is_stmt 1 view .LVU44
+ 220              	.L13:
+ 185:usb_descriptors.c **** }
+ 221              		.loc 1 185 1 is_stmt 0 view .LVU45
+ 222 004c 09B0     		add	sp, sp, #36
+ 223              		.cfi_remember_state
+ 224              		.cfi_def_cfa_offset 28
+ 225              		@ sp needed
+ 226 004e BDE8F083 		pop	{r4, r5, r6, r7, r8, r9, pc}
+ 227              	.LVL14:
+ 228              	.L14:
+ 229              		.cfi_restore_state
+ 230              	.LBB25:
+ 150:usb_descriptors.c ****       chr_count = 1;
+ 231              		.loc 1 150 7 is_stmt 1 view .LVU46
+ 232 0052 1F4D     		ldr	r5, .L29+4
+ 233 0054 40F20942 		movw	r2, #1033
+ 152:usb_descriptors.c **** 
+ 234              		.loc 1 152 7 is_stmt 0 view .LVU47
+ 235 0058 4FF44173 		mov	r3, #772
+ 150:usb_descriptors.c ****       chr_count = 1;
+ 236              		.loc 1 150 7 view .LVU48
+ 237 005c 6A80     		strh	r2, [r5, #2]	@ movhi
+ 151:usb_descriptors.c ****       break;
+ 238              		.loc 1 151 7 is_stmt 1 view .LVU49
+ 239              	.LVL15:
+ 152:usb_descriptors.c **** 
+ 240              		.loc 1 152 7 view .LVU50
+ 241 005e F3E7     		b	.L17
+ 242              	.LVL16:
+ 243              	.L15:
+ 154:usb_descriptors.c **** 
+ 244              		.loc 1 154 24 view .LVU51
+ 245              	.LBB14:
+ 246              	.LBI14:
+ 247              		.file 2 "/home/pi/Developer/tinyusb/hw/bsp/board_api.h"
+   1:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** /*
+   2:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * The MIT License (MIT)
+   3:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  *
+   4:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * Copyright (c) 2019 Ha Thach (tinyusb.org)
+   5:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  *
+   6:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * Permission is hereby granted, free of charge, to any person obtaining a copy
+   7:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * of this software and associated documentation files (the "Software"), to deal
+   8:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * in the Software without restriction, including without limitation the rights
+   9:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  10:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * copies of the Software, and to permit persons to whom the Software is
+  11:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * furnished to do so, subject to the following conditions:
+  12:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  *
+  13:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * The above copyright notice and this permission notice shall be included in
+  14:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * all copies or substantial portions of the Software.
+  15:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  *
+ARM GAS  /tmp/ccud6YoL.s 			page 9
+
+
+  16:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  17:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  18:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  19:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  20:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  21:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  22:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * THE SOFTWARE.
+  23:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  *
+  24:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  * This file is part of the TinyUSB stack.
+  25:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****  */
+  26:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  27:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #ifndef BOARD_API_H_
+  28:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #define BOARD_API_H_
+  29:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  30:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #ifdef __cplusplus
+  31:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** extern "C" {
+  32:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #endif
+  33:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  34:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #include <stdint.h>
+  35:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #include <inttypes.h>
+  36:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #include <stdbool.h>
+  37:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #include <string.h>
+  38:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #include <stdio.h>
+  39:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  40:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #include "tusb.h"
+  41:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  42:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #if CFG_TUSB_OS == OPT_OS_ZEPHYR
+  43:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   #include <zephyr/kernel.h>
+  44:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #elif CFG_TUSB_OS == OPT_OS_FREERTOS
+  45:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   #ifdef ESP_PLATFORM
+  46:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     // ESP-IDF need "freertos/" prefix in include path.
+  47:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     // CFG_TUSB_OS_INC_PATH should be defined accordingly.
+  48:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     #include "freertos/FreeRTOS.h"
+  49:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     #include "freertos/semphr.h"
+  50:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     #include "freertos/queue.h"
+  51:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     #include "freertos/task.h"
+  52:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     #include "freertos/timers.h"
+  53:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   #else
+  54:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     #include "FreeRTOS.h"
+  55:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     #include "semphr.h"
+  56:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     #include "queue.h"
+  57:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     #include "task.h"
+  58:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     #include "timers.h"
+  59:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   #endif
+  60:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #endif
+  61:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  62:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Define the default baudrate
+  63:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #ifndef CFG_BOARD_UART_BAUDRATE
+  64:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #define CFG_BOARD_UART_BAUDRATE 115200   ///< Default baud rate
+  65:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** #endif
+  66:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  67:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** //--------------------------------------------------------------------+
+  68:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Board Porting API
+  69:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // For simplicity, only one LED and one Button are used
+  70:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** //--------------------------------------------------------------------+
+  71:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  72:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Initialize on-board peripherals : led, button, uart and USB
+ARM GAS  /tmp/ccud6YoL.s 			page 10
+
+
+  73:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** void board_init(void);
+  74:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  75:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Init board after tinyusb is initialized
+  76:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** void board_init_after_tusb(void);
+  77:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  78:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Jump to bootloader
+  79:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** void board_reset_to_bootloader(void);
+  80:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  81:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Turn LED on or off
+  82:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** void board_led_write(bool state);
+  83:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  84:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Control led pattern using phase duration in ms.
+  85:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // For each phase, LED is toggle then repeated, board_led_task() is required to be called
+  86:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** //void board_led_pattern(uint32_t const phase_ms[], uint8_t count);
+  87:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  88:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Get the current state of button
+  89:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // a '1' means active (pressed), a '0' means inactive.
+  90:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** uint32_t board_button_read(void);
+  91:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  92:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Get board unique ID for USB serial number. Return number of bytes. Note max_len is typically 16
+  93:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** size_t board_get_unique_id(uint8_t id[], size_t max_len);
+  94:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  95:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Get characters from UART (non-blocking). Return number of read bytes.
+  96:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** int board_uart_read(uint8_t *buf, int len);
+  97:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+  98:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Send characters to UART (non-blocking). Return number of sent bytes
+  99:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** int board_uart_write(void const *buf, int len);
+ 100:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+ 101:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** //--------------------------------------------------------------------+
+ 102:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Helper functions
+ 103:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** //--------------------------------------------------------------------+
+ 104:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** static inline void board_led_on(void) {
+ 105:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   board_led_write(true);
+ 106:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** }
+ 107:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+ 108:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** static inline void board_led_off(void) {
+ 109:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   board_led_write(false);
+ 110:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** }
+ 111:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+ 112:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Get USB Serial number string from unique ID if available. Return number of character.
+ 113:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** // Input is string descriptor from index 1 (index 0 is type + len)
+ 114:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** static inline size_t board_usb_get_serial(uint16_t desc_str1[], size_t max_chars) {
+ 248              		.loc 2 114 22 view .LVU52
+ 249              	.LBB15:
+ 115:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   uint8_t uid[16] TU_ATTR_ALIGNED(4);
+ 250              		.loc 2 115 3 view .LVU53
+ 116:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   size_t uid_len;
+ 251              		.loc 2 116 3 view .LVU54
+ 117:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+ 118:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   // TODO work with make, but not working with esp32s3 cmake
+ 119:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   uid_len = board_get_unique_id(uid, sizeof(uid));
+ 252              		.loc 2 119 3 view .LVU55
+ 253              		.loc 2 119 13 is_stmt 0 view .LVU56
+ 254 0060 1021     		movs	r1, #16
+ 255              	.LVL17:
+ 256              		.loc 2 119 13 view .LVU57
+ 257 0062 6846     		mov	r0, sp
+ARM GAS  /tmp/ccud6YoL.s 			page 11
+
+
+ 258              	.LVL18:
+ 259              		.loc 2 119 13 view .LVU58
+ 260 0064 FFF7FEFF 		bl	board_get_unique_id
+ 261              	.LVL19:
+ 120:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+ 121:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   if ( uid_len > max_chars / 2u ) {
+ 262              		.loc 2 121 3 is_stmt 1 view .LVU59
+ 263 0068 1028     		cmp	r0, #16
+ 264 006a 8646     		mov	lr, r0
+ 265 006c 184D     		ldr	r5, .L29+4
+ 266 006e 28BF     		it	cs
+ 267 0070 4FF0100E 		movcs	lr, #16
+ 268              	.LVL20:
+ 122:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     uid_len = max_chars / 2u;
+ 123:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   }
+ 124:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+ 125:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   for ( size_t i = 0; i < uid_len; i++ ) {
+ 269              		.loc 2 125 3 view .LVU60
+ 270              	.LBB16:
+ 271              		.loc 2 125 9 view .LVU61
+ 272              		.loc 2 125 23 view .LVU62
+ 273              		.loc 2 125 3 is_stmt 0 view .LVU63
+ 274 0074 E0B1     		cbz	r0, .L20
+ 275 0076 E846     		mov	r8, sp
+ 276              		.loc 2 125 16 view .LVU64
+ 277 0078 0027     		movs	r7, #0
+ 278 007a 164C     		ldr	r4, .L29+8
+ 279 007c 2E46     		mov	r6, r5
+ 280 007e 0DF1100C 		add	ip, sp, #16
+ 281              	.LVL21:
+ 282              	.L19:
+ 283              	.LBB17:
+ 126:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     for ( size_t j = 0; j < 2; j++ ) {
+ 284              		.loc 2 126 25 is_stmt 1 view .LVU65
+ 285              	.LBB18:
+ 127:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****       const unsigned char nibble_to_hex[16] = {
+ 286              		.loc 2 127 7 view .LVU66
+ 287              	.LBE18:
+ 288              	.LBE17:
+ 125:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     for ( size_t j = 0; j < 2; j++ ) {
+ 289              		.loc 2 125 37 is_stmt 0 view .LVU67
+ 290 0082 0137     		adds	r7, r7, #1
+ 291              	.LVL22:
+ 125:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     for ( size_t j = 0; j < 2; j++ ) {
+ 292              		.loc 2 125 3 view .LVU68
+ 293 0084 0436     		adds	r6, r6, #4
+ 294              	.LBB22:
+ 295              	.LBB19:
+ 296              		.loc 2 127 27 view .LVU69
+ 297 0086 94E80F00 		ldm	r4, {r0, r1, r2, r3}
+ 298 008a 8CE80F00 		stm	ip, {r0, r1, r2, r3}
+ 128:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****           '0', '1', '2', '3', '4', '5', '6', '7',
+ 129:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****           '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+ 130:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****       };
+ 131:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****       const uint8_t nibble = (uint8_t) ((uid[i] >> (j * 4u)) & 0xfu);
+ 299              		.loc 2 131 7 is_stmt 1 view .LVU70
+ 300              		.loc 2 131 45 is_stmt 0 view .LVU71
+ARM GAS  /tmp/ccud6YoL.s 			page 12
+
+
+ 301 008e 18F8012B 		ldrb	r2, [r8], #1	@ zero_extendqisi2
+ 302              	.LVL23:
+ 132:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****       desc_str1[i * 2 + (1 - j)] = nibble_to_hex[nibble]; // UTF-16-LE
+ 303              		.loc 2 132 7 is_stmt 1 view .LVU72
+ 304              		.loc 2 132 49 is_stmt 0 view .LVU73
+ 305 0092 08A9     		add	r1, sp, #32
+ 306              	.LBE19:
+ 307              	.LBE22:
+ 125:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     for ( size_t j = 0; j < 2; j++ ) {
+ 308              		.loc 2 125 3 view .LVU74
+ 309 0094 BE45     		cmp	lr, r7
+ 310              	.LBB23:
+ 311              	.LBB20:
+ 312              		.loc 2 132 49 view .LVU75
+ 313 0096 02F00F03 		and	r3, r2, #15
+ 314 009a 01EB1219 		add	r9, r1, r2, lsr #4
+ 315 009e 0B44     		add	r3, r3, r1
+ 316 00a0 13F8103C 		ldrb	r3, [r3, #-16]	@ zero_extendqisi2
+ 317 00a4 3380     		strh	r3, [r6]	@ movhi
+ 318              	.LBE20:
+ 126:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****       const unsigned char nibble_to_hex[16] = {
+ 319              		.loc 2 126 32 is_stmt 1 view .LVU76
+ 320              	.LVL24:
+ 126:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****       const unsigned char nibble_to_hex[16] = {
+ 321              		.loc 2 126 25 view .LVU77
+ 322              	.LBB21:
+ 127:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****           '0', '1', '2', '3', '4', '5', '6', '7',
+ 323              		.loc 2 127 7 view .LVU78
+ 131:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****       desc_str1[i * 2 + (1 - j)] = nibble_to_hex[nibble]; // UTF-16-LE
+ 324              		.loc 2 131 7 view .LVU79
+ 325              		.loc 2 132 7 view .LVU80
+ 326              		.loc 2 132 49 is_stmt 0 view .LVU81
+ 327 00a6 19F8103C 		ldrb	r3, [r9, #-16]	@ zero_extendqisi2
+ 328 00aa 26F8023C 		strh	r3, [r6, #-2]	@ movhi
+ 329              	.LBE21:
+ 126:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****       const unsigned char nibble_to_hex[16] = {
+ 330              		.loc 2 126 32 is_stmt 1 view .LVU82
+ 331              	.LVL25:
+ 126:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****       const unsigned char nibble_to_hex[16] = {
+ 332              		.loc 2 126 25 view .LVU83
+ 333              	.LBE23:
+ 125:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     for ( size_t j = 0; j < 2; j++ ) {
+ 334              		.loc 2 125 36 view .LVU84
+ 125:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     for ( size_t j = 0; j < 2; j++ ) {
+ 335              		.loc 2 125 23 view .LVU85
+ 125:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     for ( size_t j = 0; j < 2; j++ ) {
+ 336              		.loc 2 125 3 is_stmt 0 view .LVU86
+ 337 00ae E8D8     		bhi	.L19
+ 338              	.LVL26:
+ 339              	.L20:
+ 125:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     for ( size_t j = 0; j < 2; j++ ) {
+ 340              		.loc 2 125 3 view .LVU87
+ 341              	.LBE16:
+ 133:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****     }
+ 134:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   }
+ 135:/home/pi/Developer/tinyusb/hw/bsp/board_api.h **** 
+ 136:/home/pi/Developer/tinyusb/hw/bsp/board_api.h ****   return 2 * uid_len;
+ARM GAS  /tmp/ccud6YoL.s 			page 13
+
+
+ 342              		.loc 2 136 3 is_stmt 1 view .LVU88
+ 343              		.loc 2 136 3 is_stmt 0 view .LVU89
+ 344              	.LBE15:
+ 345              	.LBE14:
+ 154:usb_descriptors.c **** 
+ 346              		.loc 1 154 77 is_stmt 1 view .LVU90
+ 347              	.LBE25:
+ 182:usb_descriptors.c **** 
+ 348              		.loc 1 182 70 is_stmt 0 view .LVU91
+ 349 00b0 4FEA8E03 		lsl	r3, lr, #2
+ 350 00b4 0233     		adds	r3, r3, #2
+ 182:usb_descriptors.c **** 
+ 351              		.loc 1 182 18 view .LVU92
+ 352 00b6 43F44073 		orr	r3, r3, #768
+ 353 00ba 9BB2     		uxth	r3, r3
+ 354              	.LBB26:
+ 154:usb_descriptors.c **** 
+ 355              		.loc 1 154 5 view .LVU93
+ 356 00bc C4E7     		b	.L17
+ 357              	.LVL27:
+ 358              	.L23:
+ 161:usb_descriptors.c ****       }
+ 359              		.loc 1 161 16 view .LVU94
+ 360 00be 0020     		movs	r0, #0
+ 361              	.LVL28:
+ 161:usb_descriptors.c ****       }
+ 362              		.loc 1 161 16 view .LVU95
+ 363 00c0 C4E7     		b	.L13
+ 364              	.LVL29:
+ 365              	.L24:
+ 366              	.LBB24:
+ 175:usb_descriptors.c ****         _desc_str[1 + i] = str[i];
+ 367              		.loc 1 175 7 view .LVU96
+ 368 00c2 40F20233 		movw	r3, #770
+ 369 00c6 024D     		ldr	r5, .L29+4
+ 370 00c8 BEE7     		b	.L17
+ 371              	.L30:
+ 372 00ca 00BF     		.align	2
+ 373              	.L29:
+ 374 00cc 00000000 		.word	.LANCHOR5
+ 375 00d0 00000000 		.word	.LANCHOR4
+ 376 00d4 00000000 		.word	.LC0
+ 377              	.LBE24:
+ 378              	.LBE26:
+ 379              		.cfi_endproc
+ 380              	.LFE419:
+ 382              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 383              		.align	2
+ 384              	.LC1:
+ 385 0000 54696E79 		.ascii	"TinyUSB\000"
+ 385      55534200 
+ 386              		.align	2
+ 387              	.LC2:
+ 388 0008 54696E79 		.ascii	"TinyUSB Device\000"
+ 388      55534220 
+ 388      44657669 
+ 388      636500
+ARM GAS  /tmp/ccud6YoL.s 			page 14
+
+
+ 389              		.global	desc_configuration
+ 390              		.global	desc_hid_mouse_report
+ 391              		.global	desc_hid_keyboard_report
+ 392              		.section	.bss._desc_str,"aw",%nobits
+ 393              		.align	2
+ 394              		.set	.LANCHOR4,. + 0
+ 397              	_desc_str:
+ 398 0000 00000000 		.space	66
+ 398      00000000 
+ 398      00000000 
+ 398      00000000 
+ 398      00000000 
+ 399              		.section	.rodata.__compound_literal.0,"a"
+ 400              		.align	2
+ 403              	__compound_literal.0:
+ 404 0000 09       		.byte	9
+ 405 0001 04       		.byte	4
+ 406              		.section	.rodata.desc_configuration,"a"
+ 407              		.align	2
+ 408              		.set	.LANCHOR3,. + 0
+ 411              	desc_configuration:
+ 412 0000 09023B00 		.ascii	"\011\002;\000\002\001\000\2402\011\004\000\000\001\003"
+ 412      020100A0 
+ 412      32090400 
+ 412      000103
+ 413 000f 01010009 		.ascii	"\001\001\000\011!\021\001\000\001\"A\000\007\005\201"
+ 413      21110100 
+ 413      01224100 
+ 413      070581
+ 414 001e 0308000A 		.ascii	"\003\010\000\012\011\004\001\000\001\003\001\002\000"
+ 414      09040100 
+ 414      01030102 
+ 414      00
+ 415 002b 09211101 		.ascii	"\011!\021\001\000\001\"M\000\007\005\202\003\010\000"
+ 415      0001224D 
+ 415      00070582 
+ 415      030800
+ 416 003a 0A       		.ascii	"\012"
+ 417              		.section	.rodata.desc_device,"a"
+ 418              		.align	2
+ 419              		.set	.LANCHOR0,. + 0
+ 422              	desc_device:
+ 423 0000 12       		.byte	18
+ 424 0001 01       		.byte	1
+ 425 0002 0002     		.short	512
+ 426 0004 00       		.byte	0
+ 427 0005 00       		.byte	0
+ 428 0006 00       		.byte	0
+ 429 0007 40       		.byte	64
+ 430 0008 FECA     		.short	-13570
+ 431 000a 0440     		.short	16388
+ 432 000c 0001     		.short	256
+ 433 000e 01       		.byte	1
+ 434 000f 02       		.byte	2
+ 435 0010 03       		.byte	3
+ 436 0011 01       		.byte	1
+ 437              		.section	.rodata.desc_hid_keyboard_report,"a"
+ARM GAS  /tmp/ccud6YoL.s 			page 15
+
+
+ 438              		.align	2
+ 439              		.set	.LANCHOR1,. + 0
+ 442              	desc_hid_keyboard_report:
+ 443 0000 05010906 		.ascii	"\005\001\011\006\241\001\005\007\031\340)\347\025\000"
+ 443      A1010507 
+ 443      19E029E7 
+ 443      1500
+ 444 000e 25019508 		.ascii	"%\001\225\010u\001\201\002\225\001u\010\201\001\005"
+ 444      75018102 
+ 444      95017508 
+ 444      810105
+ 445 001d 08190129 		.ascii	"\010\031\001)\005\225\005u\001\221\002\225\001u\003"
+ 445      05950575 
+ 445      01910295 
+ 445      017503
+ 446 002c 91010507 		.ascii	"\221\001\005\007\031\000*\377\000\025\000&\377\000\225"
+ 446      19002AFF 
+ 446      00150026 
+ 446      FF0095
+ 447 003b 06750881 		.ascii	"\006u\010\201\000\300"
+ 447      00C0
+ 448              		.section	.rodata.desc_hid_mouse_report,"a"
+ 449              		.align	2
+ 450              		.set	.LANCHOR2,. + 0
+ 453              	desc_hid_mouse_report:
+ 454 0000 05010902 		.ascii	"\005\001\011\002\241\001\011\001\241\000\005\011\031"
+ 454      A1010901 
+ 454      A1000509 
+ 454      19
+ 455 000d 01290515 		.ascii	"\001)\005\025\000%\001\225\005u\001\201\002\225\001"
+ 455      00250195 
+ 455      05750181 
+ 455      029501
+ 456 001c 75038101 		.ascii	"u\003\201\001\005\001\0110\0111\025\201%\177\225\002"
+ 456      05010930 
+ 456      09311581 
+ 456      257F9502 
+ 457 002c 75088106 		.ascii	"u\010\201\006\0118\025\201%\177\225\001u\010\201\006"
+ 457      09381581 
+ 457      257F9501 
+ 457      75088106 
+ 458 003c 050C0A38 		.ascii	"\005\014\0128\002\025\201%\177\225\001u\010\201\006"
+ 458      02158125 
+ 458      7F950175 
+ 458      088106
+ 459 004b C0C0     		.ascii	"\300\300"
+ 460              		.section	.rodata.string_desc_arr,"a"
+ 461              		.align	2
+ 462              		.set	.LANCHOR5,. + 0
+ 465              	string_desc_arr:
+ 466 0000 00000000 		.word	__compound_literal.0
+ 467 0004 00000000 		.word	.LC1
+ 468 0008 08000000 		.word	.LC2
+ 469 000c 00000000 		.word	0
+ 470              		.text
+ 471              	.Letext0:
+ 472              		.file 3 "/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/arm-none-eabi/include/machine/_defa
+ARM GAS  /tmp/ccud6YoL.s 			page 16
+
+
+ 473              		.file 4 "/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/arm-none-eabi/include/sys/_stdint.h
+ 474              		.file 5 "/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/lib/gcc/arm-none-eabi/10.2.1/includ
+ 475              		.file 6 "/home/pi/Developer/tinyusb/src/common/tusb_types.h"
+ 476              		.file 7 "/home/pi/Developer/tinyusb/src/class/hid/hid.h"
+ 477              		.file 8 "usb_descriptors.h"
+ 478              		.file 9 "/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/arm-none-eabi/include/string.h"
+ARM GAS  /tmp/ccud6YoL.s 			page 17
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 usb_descriptors.c
+     /tmp/ccud6YoL.s:17     .text.tud_descriptor_device_cb:0000000000000000 $t
+     /tmp/ccud6YoL.s:26     .text.tud_descriptor_device_cb:0000000000000000 tud_descriptor_device_cb
+     /tmp/ccud6YoL.s:41     .text.tud_descriptor_device_cb:0000000000000004 $d
+     /tmp/ccud6YoL.s:46     .text.tud_hid_descriptor_report_cb:0000000000000000 $t
+     /tmp/ccud6YoL.s:54     .text.tud_hid_descriptor_report_cb:0000000000000000 tud_hid_descriptor_report_cb
+     /tmp/ccud6YoL.s:77     .text.tud_hid_descriptor_report_cb:0000000000000010 $d
+     /tmp/ccud6YoL.s:83     .text.tud_descriptor_configuration_cb:0000000000000000 $t
+     /tmp/ccud6YoL.s:91     .text.tud_descriptor_configuration_cb:0000000000000000 tud_descriptor_configuration_cb
+     /tmp/ccud6YoL.s:109    .text.tud_descriptor_configuration_cb:0000000000000004 $d
+     /tmp/ccud6YoL.s:114    .rodata.tud_descriptor_string_cb.str1.4:0000000000000000 $d
+     /tmp/ccud6YoL.s:118    .text.tud_descriptor_string_cb:0000000000000000 $t
+     /tmp/ccud6YoL.s:126    .text.tud_descriptor_string_cb:0000000000000000 tud_descriptor_string_cb
+     /tmp/ccud6YoL.s:374    .text.tud_descriptor_string_cb:00000000000000cc $d
+     /tmp/ccud6YoL.s:383    .rodata.str1.4:0000000000000000 $d
+     /tmp/ccud6YoL.s:411    .rodata.desc_configuration:0000000000000000 desc_configuration
+     /tmp/ccud6YoL.s:453    .rodata.desc_hid_mouse_report:0000000000000000 desc_hid_mouse_report
+     /tmp/ccud6YoL.s:442    .rodata.desc_hid_keyboard_report:0000000000000000 desc_hid_keyboard_report
+     /tmp/ccud6YoL.s:393    .bss._desc_str:0000000000000000 $d
+     /tmp/ccud6YoL.s:397    .bss._desc_str:0000000000000000 _desc_str
+     /tmp/ccud6YoL.s:400    .rodata.__compound_literal.0:0000000000000000 $d
+     /tmp/ccud6YoL.s:403    .rodata.__compound_literal.0:0000000000000000 __compound_literal.0
+     /tmp/ccud6YoL.s:407    .rodata.desc_configuration:0000000000000000 $d
+     /tmp/ccud6YoL.s:418    .rodata.desc_device:0000000000000000 $d
+     /tmp/ccud6YoL.s:422    .rodata.desc_device:0000000000000000 desc_device
+     /tmp/ccud6YoL.s:438    .rodata.desc_hid_keyboard_report:0000000000000000 $d
+     /tmp/ccud6YoL.s:449    .rodata.desc_hid_mouse_report:0000000000000000 $d
+     /tmp/ccud6YoL.s:461    .rodata.string_desc_arr:0000000000000000 $d
+     /tmp/ccud6YoL.s:465    .rodata.string_desc_arr:0000000000000000 string_desc_arr
+
+UNDEFINED SYMBOLS
+strlen
+board_get_unique_id

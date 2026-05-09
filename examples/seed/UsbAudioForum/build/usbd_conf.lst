@@ -1,0 +1,2672 @@
+ARM GAS  /tmp/ccbPGhD2.s 			page 1
+
+
+   1              		.cpu cortex-m7
+   2              		.eabi_attribute 28, 1
+   3              		.eabi_attribute 20, 1
+   4              		.eabi_attribute 21, 1
+   5              		.eabi_attribute 23, 3
+   6              		.eabi_attribute 24, 1
+   7              		.eabi_attribute 25, 1
+   8              		.eabi_attribute 26, 1
+   9              		.eabi_attribute 30, 2
+  10              		.eabi_attribute 34, 1
+  11              		.eabi_attribute 18, 4
+  12              		.file	"usbd_conf.c"
+  13              		.text
+  14              	.Ltext0:
+  15              		.cfi_sections	.debug_frame
+  16              		.section	.text.Error_Handler,"ax",%progbits
+  17              		.align	1
+  18              		.p2align 2,,3
+  19              		.global	Error_Handler
+  20              		.arch armv7e-m
+  21              		.syntax unified
+  22              		.thumb
+  23              		.thumb_func
+  24              		.fpu fpv5-d16
+  26              	Error_Handler:
+  27              	.LFB323:
+  28              		.file 1 "usbd_conf.c"
+   1:usbd_conf.c   **** /**
+   2:usbd_conf.c   ****   ******************************************************************************
+   3:usbd_conf.c   ****   * @file    usbd_conf.c
+   4:usbd_conf.c   ****   * @brief   USB Device board support / PCD glue layer for Daisy Seed UAC1
+   5:usbd_conf.c   ****   *
+   6:usbd_conf.c   ****   * Changes from libDaisy CDC baseline:
+   7:usbd_conf.c   ****   *  1. Sof_enable = ENABLE  — audio class USBD_AUDIO_SOF() needs SOF events
+   8:usbd_conf.c   ****   *  2. TX FIFO 1 enlarged    — audio IN packets are 192 bytes; old 0x80 (128B)
+   9:usbd_conf.c   ****   *                             was borderline; 0xC0 (192B) gives clean headroom
+  10:usbd_conf.c   ****   *  3. vbus_sensing_enable   — left ENABLE for FS (Daisy has VBUS sense on PA9)
+  11:usbd_conf.c   ****   *  4. HS init removed       — Daisy Seed only has the FS connector exposed;
+  12:usbd_conf.c   ****   *                             keep the HS block for completeness but it's unused
+  13:usbd_conf.c   ****   ******************************************************************************
+  14:usbd_conf.c   ****   */
+  15:usbd_conf.c   **** 
+  16:usbd_conf.c   **** #include "stm32h7xx.h"
+  17:usbd_conf.c   **** #include "stm32h7xx_hal.h"
+  18:usbd_conf.c   **** #include "usbd_def.h"
+  19:usbd_conf.c   **** #include "usbd_core.h"
+  20:usbd_conf.c   **** 
+  21:usbd_conf.c   **** PCD_HandleTypeDef hpcd_USB_OTG_FS;
+  22:usbd_conf.c   **** PCD_HandleTypeDef hpcd_USB_OTG_HS;
+  23:usbd_conf.c   **** 
+  24:usbd_conf.c   **** void Error_Handler(void) { while(1) {} }
+  29              		.loc 1 24 26 view -0
+  30              		.cfi_startproc
+  31              		@ Volatile: function does not return.
+  32              		@ args = 0, pretend = 0, frame = 0
+  33              		@ frame_needed = 0, uses_anonymous_args = 0
+  34              		@ link register save eliminated.
+ARM GAS  /tmp/ccbPGhD2.s 			page 2
+
+
+  35              	.L2:
+  36              		.loc 1 24 28 discriminator 1 view .LVU1
+  37              		.loc 1 24 38 discriminator 1 view .LVU2
+  38              		.loc 1 24 33 discriminator 1 view .LVU3
+  39 0000 FEE7     		b	.L2
+  40              		.cfi_endproc
+  41              	.LFE323:
+  43 0002 00BF     		.section	.text.HAL_PCD_MspInit,"ax",%progbits
+  44              		.align	1
+  45              		.p2align 2,,3
+  46              		.global	HAL_PCD_MspInit
+  47              		.syntax unified
+  48              		.thumb
+  49              		.thumb_func
+  50              		.fpu fpv5-d16
+  52              	HAL_PCD_MspInit:
+  53              	.LVL0:
+  54              	.LFB324:
+  25:usbd_conf.c   **** 
+  26:usbd_conf.c   **** USBD_StatusTypeDef USBD_Get_USB_Status(HAL_StatusTypeDef hal_status);
+  27:usbd_conf.c   **** 
+  28:usbd_conf.c   **** /* -------------------------------------------------------------------------- */
+  29:usbd_conf.c   **** /* MSP Init / DeInit                                                           */
+  30:usbd_conf.c   **** /* -------------------------------------------------------------------------- */
+  31:usbd_conf.c   **** 
+  32:usbd_conf.c   **** void HAL_PCD_MspInit(PCD_HandleTypeDef *pcdHandle)
+  33:usbd_conf.c   **** {
+  55              		.loc 1 33 1 view -0
+  56              		.cfi_startproc
+  57              		@ args = 0, pretend = 0, frame = 40
+  58              		@ frame_needed = 0, uses_anonymous_args = 0
+  34:usbd_conf.c   ****     GPIO_InitTypeDef GPIO_InitStruct = {0};
+  59              		.loc 1 34 5 view .LVU5
+  35:usbd_conf.c   ****     if(pcdHandle->Instance == USB_OTG_FS)
+  60              		.loc 1 35 7 is_stmt 0 view .LVU6
+  61 0000 4A4A     		ldr	r2, .L10
+  62              		.loc 1 35 17 view .LVU7
+  63 0002 0368     		ldr	r3, [r0]
+  33:usbd_conf.c   ****     GPIO_InitTypeDef GPIO_InitStruct = {0};
+  64              		.loc 1 33 1 view .LVU8
+  65 0004 70B5     		push	{r4, r5, r6, lr}
+  66              		.cfi_def_cfa_offset 16
+  67              		.cfi_offset 4, -16
+  68              		.cfi_offset 5, -12
+  69              		.cfi_offset 6, -8
+  70              		.cfi_offset 14, -4
+  71              		.loc 1 35 7 view .LVU9
+  72 0006 9342     		cmp	r3, r2
+  33:usbd_conf.c   ****     GPIO_InitTypeDef GPIO_InitStruct = {0};
+  73              		.loc 1 33 1 view .LVU10
+  74 0008 8AB0     		sub	sp, sp, #40
+  75              		.cfi_def_cfa_offset 56
+  34:usbd_conf.c   ****     GPIO_InitTypeDef GPIO_InitStruct = {0};
+  76              		.loc 1 34 22 view .LVU11
+  77 000a 4FF00004 		mov	r4, #0
+  78 000e CDE90544 		strd	r4, r4, [sp, #20]
+  79 0012 CDE90744 		strd	r4, r4, [sp, #28]
+ARM GAS  /tmp/ccbPGhD2.s 			page 3
+
+
+  80 0016 0994     		str	r4, [sp, #36]
+  81              		.loc 1 35 5 is_stmt 1 view .LVU12
+  82              		.loc 1 35 7 is_stmt 0 view .LVU13
+  83 0018 04D0     		beq	.L8
+  36:usbd_conf.c   ****     {
+  37:usbd_conf.c   ****         __HAL_RCC_GPIOA_CLK_ENABLE();
+  38:usbd_conf.c   **** 
+  39:usbd_conf.c   ****         /* PA11 = DM, PA12 = DP, PA9 = VBUS (unused in external build) */
+  40:usbd_conf.c   ****         GPIO_InitStruct.Pin       = GPIO_PIN_12 | GPIO_PIN_11;
+  41:usbd_conf.c   ****         GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+  42:usbd_conf.c   ****         GPIO_InitStruct.Pull      = GPIO_NOPULL;
+  43:usbd_conf.c   ****         GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_LOW;
+  44:usbd_conf.c   ****         GPIO_InitStruct.Alternate = GPIO_AF10_OTG1_FS;
+  45:usbd_conf.c   ****         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  46:usbd_conf.c   **** 
+  47:usbd_conf.c   ****         /* VBUS sense (input, no pull) */
+  48:usbd_conf.c   ****         GPIO_InitStruct.Pin  = GPIO_PIN_9;
+  49:usbd_conf.c   ****         GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  50:usbd_conf.c   ****         GPIO_InitStruct.Pull = GPIO_NOPULL;
+  51:usbd_conf.c   ****         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  52:usbd_conf.c   **** 
+  53:usbd_conf.c   ****         __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
+  54:usbd_conf.c   **** 
+  55:usbd_conf.c   ****         /* Priority 0 so audio IRQs aren't delayed */
+  56:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_FS_EP1_OUT_IRQn, 2, 0);
+  57:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_FS_EP1_OUT_IRQn);
+  58:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_FS_EP1_IN_IRQn, 2, 0);
+  59:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_FS_EP1_IN_IRQn);
+  60:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_FS_IRQn, 2, 0);
+  61:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
+  62:usbd_conf.c   ****     }
+  63:usbd_conf.c   ****     else if(pcdHandle->Instance == USB_OTG_HS)
+  84              		.loc 1 63 10 is_stmt 1 view .LVU14
+  85              		.loc 1 63 12 is_stmt 0 view .LVU15
+  86 001a 454A     		ldr	r2, .L10+4
+  87 001c 9342     		cmp	r3, r2
+  88 001e 48D0     		beq	.L9
+  64:usbd_conf.c   ****     {
+  65:usbd_conf.c   ****         __HAL_RCC_GPIOB_CLK_ENABLE();
+  66:usbd_conf.c   ****         GPIO_InitStruct.Pin       = GPIO_PIN_14 | GPIO_PIN_15;
+  67:usbd_conf.c   ****         GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+  68:usbd_conf.c   ****         GPIO_InitStruct.Pull      = GPIO_NOPULL;
+  69:usbd_conf.c   ****         GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_LOW;
+  70:usbd_conf.c   ****         GPIO_InitStruct.Alternate = GPIO_AF12_OTG2_FS;
+  71:usbd_conf.c   ****         HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  72:usbd_conf.c   ****         __HAL_RCC_USB_OTG_HS_CLK_ENABLE();
+  73:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_HS_EP1_OUT_IRQn, 2, 0);
+  74:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_HS_EP1_OUT_IRQn);
+  75:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_HS_EP1_IN_IRQn, 2, 0);
+  76:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_HS_EP1_IN_IRQn);
+  77:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_HS_IRQn, 2, 0);
+  78:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_HS_IRQn);
+  79:usbd_conf.c   ****     }
+  80:usbd_conf.c   **** }
+  89              		.loc 1 80 1 view .LVU16
+  90 0020 0AB0     		add	sp, sp, #40
+  91              		.cfi_remember_state
+ARM GAS  /tmp/ccbPGhD2.s 			page 4
+
+
+  92              		.cfi_def_cfa_offset 16
+  93              		@ sp needed
+  94 0022 70BD     		pop	{r4, r5, r6, pc}
+  95              	.L8:
+  96              		.cfi_restore_state
+  37:usbd_conf.c   **** 
+  97              		.loc 1 37 9 is_stmt 1 view .LVU17
+  98              	.LBB30:
+  37:usbd_conf.c   **** 
+  99              		.loc 1 37 9 view .LVU18
+  37:usbd_conf.c   **** 
+ 100              		.loc 1 37 9 view .LVU19
+ 101 0024 434D     		ldr	r5, .L10+8
+ 102              	.LBE30:
+  41:usbd_conf.c   ****         GPIO_InitStruct.Pull      = GPIO_NOPULL;
+ 103              		.loc 1 41 35 is_stmt 0 view .LVU20
+ 104 0026 0226     		movs	r6, #2
+  40:usbd_conf.c   ****         GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+ 105              		.loc 1 40 35 view .LVU21
+ 106 0028 4FF4C052 		mov	r2, #6144
+  45:usbd_conf.c   **** 
+ 107              		.loc 1 45 9 view .LVU22
+ 108 002c 05A9     		add	r1, sp, #20
+ 109              	.LBB31:
+  37:usbd_conf.c   **** 
+ 110              		.loc 1 37 9 view .LVU23
+ 111 002e D5F8E030 		ldr	r3, [r5, #224]
+ 112              	.LBE31:
+  45:usbd_conf.c   **** 
+ 113              		.loc 1 45 9 view .LVU24
+ 114 0032 4148     		ldr	r0, .L10+12
+ 115              	.LVL1:
+ 116              	.LBB32:
+  37:usbd_conf.c   **** 
+ 117              		.loc 1 37 9 view .LVU25
+ 118 0034 43F00103 		orr	r3, r3, #1
+ 119 0038 C5F8E030 		str	r3, [r5, #224]
+  37:usbd_conf.c   **** 
+ 120              		.loc 1 37 9 is_stmt 1 view .LVU26
+ 121 003c D5F8E030 		ldr	r3, [r5, #224]
+ 122 0040 03F00103 		and	r3, r3, #1
+ 123 0044 0193     		str	r3, [sp, #4]
+  37:usbd_conf.c   **** 
+ 124              		.loc 1 37 9 view .LVU27
+ 125 0046 019B     		ldr	r3, [sp, #4]
+ 126              	.LBE32:
+  37:usbd_conf.c   **** 
+ 127              		.loc 1 37 9 view .LVU28
+  40:usbd_conf.c   ****         GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+ 128              		.loc 1 40 9 view .LVU29
+  41:usbd_conf.c   ****         GPIO_InitStruct.Pull      = GPIO_NOPULL;
+ 129              		.loc 1 41 9 view .LVU30
+  42:usbd_conf.c   ****         GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_LOW;
+ 130              		.loc 1 42 9 view .LVU31
+  43:usbd_conf.c   ****         GPIO_InitStruct.Alternate = GPIO_AF10_OTG1_FS;
+ 131              		.loc 1 43 9 view .LVU32
+  44:usbd_conf.c   ****         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+ARM GAS  /tmp/ccbPGhD2.s 			page 5
+
+
+ 132              		.loc 1 44 9 view .LVU33
+  44:usbd_conf.c   ****         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+ 133              		.loc 1 44 35 is_stmt 0 view .LVU34
+ 134 0048 0A23     		movs	r3, #10
+  41:usbd_conf.c   ****         GPIO_InitStruct.Pull      = GPIO_NOPULL;
+ 135              		.loc 1 41 35 view .LVU35
+ 136 004a CDE90526 		strd	r2, r6, [sp, #20]
+  44:usbd_conf.c   ****         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+ 137              		.loc 1 44 35 view .LVU36
+ 138 004e 0993     		str	r3, [sp, #36]
+  45:usbd_conf.c   **** 
+ 139              		.loc 1 45 9 is_stmt 1 view .LVU37
+ 140 0050 FFF7FEFF 		bl	HAL_GPIO_Init
+ 141              	.LVL2:
+  48:usbd_conf.c   ****         GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+ 142              		.loc 1 48 9 view .LVU38
+  48:usbd_conf.c   ****         GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+ 143              		.loc 1 48 30 is_stmt 0 view .LVU39
+ 144 0054 4FF40073 		mov	r3, #512
+  51:usbd_conf.c   **** 
+ 145              		.loc 1 51 9 view .LVU40
+ 146 0058 05A9     		add	r1, sp, #20
+ 147 005a 3748     		ldr	r0, .L10+12
+  50:usbd_conf.c   ****         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+ 148              		.loc 1 50 30 view .LVU41
+ 149 005c 0794     		str	r4, [sp, #28]
+  48:usbd_conf.c   ****         GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+ 150              		.loc 1 48 30 view .LVU42
+ 151 005e CDE90534 		strd	r3, r4, [sp, #20]
+  49:usbd_conf.c   ****         GPIO_InitStruct.Pull = GPIO_NOPULL;
+ 152              		.loc 1 49 9 is_stmt 1 view .LVU43
+  50:usbd_conf.c   ****         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+ 153              		.loc 1 50 9 view .LVU44
+  51:usbd_conf.c   **** 
+ 154              		.loc 1 51 9 view .LVU45
+ 155 0062 FFF7FEFF 		bl	HAL_GPIO_Init
+ 156              	.LVL3:
+  53:usbd_conf.c   **** 
+ 157              		.loc 1 53 9 view .LVU46
+ 158              	.LBB33:
+  53:usbd_conf.c   **** 
+ 159              		.loc 1 53 9 view .LVU47
+  53:usbd_conf.c   **** 
+ 160              		.loc 1 53 9 view .LVU48
+ 161 0066 D5F8D830 		ldr	r3, [r5, #216]
+ 162              	.LBE33:
+  56:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_FS_EP1_OUT_IRQn);
+ 163              		.loc 1 56 9 is_stmt 0 view .LVU49
+ 164 006a 2246     		mov	r2, r4
+ 165 006c 3146     		mov	r1, r6
+ 166              	.LBB34:
+  53:usbd_conf.c   **** 
+ 167              		.loc 1 53 9 view .LVU50
+ 168 006e 43F00063 		orr	r3, r3, #134217728
+ 169              	.LBE34:
+  56:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_FS_EP1_OUT_IRQn);
+ 170              		.loc 1 56 9 view .LVU51
+ARM GAS  /tmp/ccbPGhD2.s 			page 6
+
+
+ 171 0072 6220     		movs	r0, #98
+ 172              	.LBB35:
+  53:usbd_conf.c   **** 
+ 173              		.loc 1 53 9 view .LVU52
+ 174 0074 C5F8D830 		str	r3, [r5, #216]
+  53:usbd_conf.c   **** 
+ 175              		.loc 1 53 9 is_stmt 1 view .LVU53
+ 176 0078 D5F8D830 		ldr	r3, [r5, #216]
+ 177 007c 03F00063 		and	r3, r3, #134217728
+ 178 0080 0293     		str	r3, [sp, #8]
+  53:usbd_conf.c   **** 
+ 179              		.loc 1 53 9 view .LVU54
+ 180 0082 029B     		ldr	r3, [sp, #8]
+ 181              	.LBE35:
+  53:usbd_conf.c   **** 
+ 182              		.loc 1 53 9 view .LVU55
+  56:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_FS_EP1_OUT_IRQn);
+ 183              		.loc 1 56 9 view .LVU56
+ 184 0084 FFF7FEFF 		bl	HAL_NVIC_SetPriority
+ 185              	.LVL4:
+  57:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_FS_EP1_IN_IRQn, 2, 0);
+ 186              		.loc 1 57 9 view .LVU57
+ 187 0088 6220     		movs	r0, #98
+ 188 008a FFF7FEFF 		bl	HAL_NVIC_EnableIRQ
+ 189              	.LVL5:
+  58:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_FS_EP1_IN_IRQn);
+ 190              		.loc 1 58 9 view .LVU58
+ 191 008e 2246     		mov	r2, r4
+ 192 0090 3146     		mov	r1, r6
+ 193 0092 6320     		movs	r0, #99
+ 194 0094 FFF7FEFF 		bl	HAL_NVIC_SetPriority
+ 195              	.LVL6:
+  59:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_FS_IRQn, 2, 0);
+ 196              		.loc 1 59 9 view .LVU59
+ 197 0098 6320     		movs	r0, #99
+ 198 009a FFF7FEFF 		bl	HAL_NVIC_EnableIRQ
+ 199              	.LVL7:
+  60:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
+ 200              		.loc 1 60 9 view .LVU60
+ 201 009e 2246     		mov	r2, r4
+ 202 00a0 3146     		mov	r1, r6
+ 203 00a2 6520     		movs	r0, #101
+ 204 00a4 FFF7FEFF 		bl	HAL_NVIC_SetPriority
+ 205              	.LVL8:
+  61:usbd_conf.c   ****     }
+ 206              		.loc 1 61 9 view .LVU61
+ 207 00a8 6520     		movs	r0, #101
+ 208 00aa FFF7FEFF 		bl	HAL_NVIC_EnableIRQ
+ 209              	.LVL9:
+ 210              		.loc 1 80 1 is_stmt 0 view .LVU62
+ 211 00ae 0AB0     		add	sp, sp, #40
+ 212              		.cfi_remember_state
+ 213              		.cfi_def_cfa_offset 16
+ 214              		@ sp needed
+ 215 00b0 70BD     		pop	{r4, r5, r6, pc}
+ 216              	.LVL10:
+ 217              	.L9:
+ARM GAS  /tmp/ccbPGhD2.s 			page 7
+
+
+ 218              		.cfi_restore_state
+  65:usbd_conf.c   ****         GPIO_InitStruct.Pin       = GPIO_PIN_14 | GPIO_PIN_15;
+ 219              		.loc 1 65 9 is_stmt 1 view .LVU63
+ 220              	.LBB36:
+  65:usbd_conf.c   ****         GPIO_InitStruct.Pin       = GPIO_PIN_14 | GPIO_PIN_15;
+ 221              		.loc 1 65 9 view .LVU64
+  65:usbd_conf.c   ****         GPIO_InitStruct.Pin       = GPIO_PIN_14 | GPIO_PIN_15;
+ 222              		.loc 1 65 9 view .LVU65
+ 223 00b2 204D     		ldr	r5, .L10+8
+ 224              	.LBE36:
+  67:usbd_conf.c   ****         GPIO_InitStruct.Pull      = GPIO_NOPULL;
+ 225              		.loc 1 67 35 is_stmt 0 view .LVU66
+ 226 00b4 0226     		movs	r6, #2
+  66:usbd_conf.c   ****         GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+ 227              		.loc 1 66 35 view .LVU67
+ 228 00b6 4FF44042 		mov	r2, #49152
+  71:usbd_conf.c   ****         __HAL_RCC_USB_OTG_HS_CLK_ENABLE();
+ 229              		.loc 1 71 9 view .LVU68
+ 230 00ba 05A9     		add	r1, sp, #20
+ 231              	.LBB37:
+  65:usbd_conf.c   ****         GPIO_InitStruct.Pin       = GPIO_PIN_14 | GPIO_PIN_15;
+ 232              		.loc 1 65 9 view .LVU69
+ 233 00bc D5F8E030 		ldr	r3, [r5, #224]
+ 234              	.LBE37:
+  71:usbd_conf.c   ****         __HAL_RCC_USB_OTG_HS_CLK_ENABLE();
+ 235              		.loc 1 71 9 view .LVU70
+ 236 00c0 1E48     		ldr	r0, .L10+16
+ 237              	.LVL11:
+ 238              	.LBB38:
+  65:usbd_conf.c   ****         GPIO_InitStruct.Pin       = GPIO_PIN_14 | GPIO_PIN_15;
+ 239              		.loc 1 65 9 view .LVU71
+ 240 00c2 3343     		orrs	r3, r3, r6
+ 241 00c4 C5F8E030 		str	r3, [r5, #224]
+  65:usbd_conf.c   ****         GPIO_InitStruct.Pin       = GPIO_PIN_14 | GPIO_PIN_15;
+ 242              		.loc 1 65 9 is_stmt 1 view .LVU72
+ 243 00c8 D5F8E030 		ldr	r3, [r5, #224]
+ 244 00cc 3340     		ands	r3, r3, r6
+ 245 00ce 0393     		str	r3, [sp, #12]
+  65:usbd_conf.c   ****         GPIO_InitStruct.Pin       = GPIO_PIN_14 | GPIO_PIN_15;
+ 246              		.loc 1 65 9 view .LVU73
+ 247 00d0 039B     		ldr	r3, [sp, #12]
+ 248              	.LBE38:
+  65:usbd_conf.c   ****         GPIO_InitStruct.Pin       = GPIO_PIN_14 | GPIO_PIN_15;
+ 249              		.loc 1 65 9 view .LVU74
+  66:usbd_conf.c   ****         GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+ 250              		.loc 1 66 9 view .LVU75
+  67:usbd_conf.c   ****         GPIO_InitStruct.Pull      = GPIO_NOPULL;
+ 251              		.loc 1 67 9 view .LVU76
+  68:usbd_conf.c   ****         GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_LOW;
+ 252              		.loc 1 68 9 view .LVU77
+  69:usbd_conf.c   ****         GPIO_InitStruct.Alternate = GPIO_AF12_OTG2_FS;
+ 253              		.loc 1 69 9 view .LVU78
+  70:usbd_conf.c   ****         HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+ 254              		.loc 1 70 9 view .LVU79
+  70:usbd_conf.c   ****         HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+ 255              		.loc 1 70 35 is_stmt 0 view .LVU80
+ 256 00d2 0C23     		movs	r3, #12
+ARM GAS  /tmp/ccbPGhD2.s 			page 8
+
+
+  67:usbd_conf.c   ****         GPIO_InitStruct.Pull      = GPIO_NOPULL;
+ 257              		.loc 1 67 35 view .LVU81
+ 258 00d4 CDE90526 		strd	r2, r6, [sp, #20]
+  70:usbd_conf.c   ****         HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+ 259              		.loc 1 70 35 view .LVU82
+ 260 00d8 0993     		str	r3, [sp, #36]
+  71:usbd_conf.c   ****         __HAL_RCC_USB_OTG_HS_CLK_ENABLE();
+ 261              		.loc 1 71 9 is_stmt 1 view .LVU83
+ 262 00da FFF7FEFF 		bl	HAL_GPIO_Init
+ 263              	.LVL12:
+  72:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_HS_EP1_OUT_IRQn, 2, 0);
+ 264              		.loc 1 72 9 view .LVU84
+ 265              	.LBB39:
+  72:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_HS_EP1_OUT_IRQn, 2, 0);
+ 266              		.loc 1 72 9 view .LVU85
+  72:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_HS_EP1_OUT_IRQn, 2, 0);
+ 267              		.loc 1 72 9 view .LVU86
+ 268 00de D5F8D830 		ldr	r3, [r5, #216]
+ 269              	.LBE39:
+  73:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_HS_EP1_OUT_IRQn);
+ 270              		.loc 1 73 9 is_stmt 0 view .LVU87
+ 271 00e2 2246     		mov	r2, r4
+ 272 00e4 3146     		mov	r1, r6
+ 273 00e6 4A20     		movs	r0, #74
+ 274              	.LBB40:
+  72:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_HS_EP1_OUT_IRQn, 2, 0);
+ 275              		.loc 1 72 9 view .LVU88
+ 276 00e8 43F00073 		orr	r3, r3, #33554432
+ 277 00ec C5F8D830 		str	r3, [r5, #216]
+  72:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_HS_EP1_OUT_IRQn, 2, 0);
+ 278              		.loc 1 72 9 is_stmt 1 view .LVU89
+ 279 00f0 D5F8D830 		ldr	r3, [r5, #216]
+ 280 00f4 03F00073 		and	r3, r3, #33554432
+ 281 00f8 0493     		str	r3, [sp, #16]
+  72:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_HS_EP1_OUT_IRQn, 2, 0);
+ 282              		.loc 1 72 9 view .LVU90
+ 283 00fa 049B     		ldr	r3, [sp, #16]
+ 284              	.LBE40:
+  72:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_HS_EP1_OUT_IRQn, 2, 0);
+ 285              		.loc 1 72 9 view .LVU91
+  73:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_HS_EP1_OUT_IRQn);
+ 286              		.loc 1 73 9 view .LVU92
+ 287 00fc FFF7FEFF 		bl	HAL_NVIC_SetPriority
+ 288              	.LVL13:
+  74:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_HS_EP1_IN_IRQn, 2, 0);
+ 289              		.loc 1 74 9 view .LVU93
+ 290 0100 4A20     		movs	r0, #74
+ 291 0102 FFF7FEFF 		bl	HAL_NVIC_EnableIRQ
+ 292              	.LVL14:
+  75:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_HS_EP1_IN_IRQn);
+ 293              		.loc 1 75 9 view .LVU94
+ 294 0106 2246     		mov	r2, r4
+ 295 0108 3146     		mov	r1, r6
+ 296 010a 4B20     		movs	r0, #75
+ 297 010c FFF7FEFF 		bl	HAL_NVIC_SetPriority
+ 298              	.LVL15:
+  76:usbd_conf.c   ****         HAL_NVIC_SetPriority(OTG_HS_IRQn, 2, 0);
+ARM GAS  /tmp/ccbPGhD2.s 			page 9
+
+
+ 299              		.loc 1 76 9 view .LVU95
+ 300 0110 4B20     		movs	r0, #75
+ 301 0112 FFF7FEFF 		bl	HAL_NVIC_EnableIRQ
+ 302              	.LVL16:
+  77:usbd_conf.c   ****         HAL_NVIC_EnableIRQ(OTG_HS_IRQn);
+ 303              		.loc 1 77 9 view .LVU96
+ 304 0116 2246     		mov	r2, r4
+ 305 0118 3146     		mov	r1, r6
+ 306 011a 4D20     		movs	r0, #77
+ 307 011c FFF7FEFF 		bl	HAL_NVIC_SetPriority
+ 308              	.LVL17:
+  78:usbd_conf.c   ****     }
+ 309              		.loc 1 78 9 view .LVU97
+ 310 0120 4D20     		movs	r0, #77
+ 311 0122 FFF7FEFF 		bl	HAL_NVIC_EnableIRQ
+ 312              	.LVL18:
+ 313              		.loc 1 80 1 is_stmt 0 view .LVU98
+ 314 0126 0AB0     		add	sp, sp, #40
+ 315              		.cfi_def_cfa_offset 16
+ 316              		@ sp needed
+ 317 0128 70BD     		pop	{r4, r5, r6, pc}
+ 318              	.L11:
+ 319 012a 00BF     		.align	2
+ 320              	.L10:
+ 321 012c 00000840 		.word	1074266112
+ 322 0130 00000440 		.word	1074003968
+ 323 0134 00440258 		.word	1476543488
+ 324 0138 00000258 		.word	1476526080
+ 325 013c 00040258 		.word	1476527104
+ 326              		.cfi_endproc
+ 327              	.LFE324:
+ 329              		.section	.text.HAL_PCD_MspDeInit,"ax",%progbits
+ 330              		.align	1
+ 331              		.p2align 2,,3
+ 332              		.global	HAL_PCD_MspDeInit
+ 333              		.syntax unified
+ 334              		.thumb
+ 335              		.thumb_func
+ 336              		.fpu fpv5-d16
+ 338              	HAL_PCD_MspDeInit:
+ 339              	.LVL19:
+ 340              	.LFB325:
+  81:usbd_conf.c   **** 
+  82:usbd_conf.c   **** void HAL_PCD_MspDeInit(PCD_HandleTypeDef *pcdHandle)
+  83:usbd_conf.c   **** {
+ 341              		.loc 1 83 1 is_stmt 1 view -0
+ 342              		.cfi_startproc
+ 343              		@ args = 0, pretend = 0, frame = 0
+ 344              		@ frame_needed = 0, uses_anonymous_args = 0
+  84:usbd_conf.c   ****     if(pcdHandle->Instance == USB_OTG_FS)
+ 345              		.loc 1 84 5 view .LVU100
+ 346              		.loc 1 84 7 is_stmt 0 view .LVU101
+ 347 0000 1B4A     		ldr	r2, .L18
+  83:usbd_conf.c   ****     if(pcdHandle->Instance == USB_OTG_FS)
+ 348              		.loc 1 83 1 view .LVU102
+ 349 0002 08B5     		push	{r3, lr}
+ 350              		.cfi_def_cfa_offset 8
+ARM GAS  /tmp/ccbPGhD2.s 			page 10
+
+
+ 351              		.cfi_offset 3, -8
+ 352              		.cfi_offset 14, -4
+ 353              		.loc 1 84 17 view .LVU103
+ 354 0004 0368     		ldr	r3, [r0]
+ 355              		.loc 1 84 7 view .LVU104
+ 356 0006 9342     		cmp	r3, r2
+ 357 0008 03D0     		beq	.L16
+  85:usbd_conf.c   ****     {
+  86:usbd_conf.c   ****         __HAL_RCC_USB_OTG_FS_CLK_DISABLE();
+  87:usbd_conf.c   ****         HAL_GPIO_DeInit(GPIOA, GPIO_PIN_12 | GPIO_PIN_11 | GPIO_PIN_9);
+  88:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_FS_EP1_OUT_IRQn);
+  89:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_FS_EP1_IN_IRQn);
+  90:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_FS_IRQn);
+  91:usbd_conf.c   ****     }
+  92:usbd_conf.c   ****     else if(pcdHandle->Instance == USB_OTG_HS)
+ 358              		.loc 1 92 10 is_stmt 1 view .LVU105
+ 359              		.loc 1 92 12 is_stmt 0 view .LVU106
+ 360 000a 1A4A     		ldr	r2, .L18+4
+ 361 000c 9342     		cmp	r3, r2
+ 362 000e 17D0     		beq	.L17
+  93:usbd_conf.c   ****     {
+  94:usbd_conf.c   ****         __HAL_RCC_USB_OTG_HS_CLK_DISABLE();
+  95:usbd_conf.c   ****         HAL_GPIO_DeInit(GPIOB, GPIO_PIN_14 | GPIO_PIN_15);
+  96:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_HS_EP1_OUT_IRQn);
+  97:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_HS_EP1_IN_IRQn);
+  98:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_HS_IRQn);
+  99:usbd_conf.c   ****     }
+ 100:usbd_conf.c   **** }
+ 363              		.loc 1 100 1 view .LVU107
+ 364 0010 08BD     		pop	{r3, pc}
+ 365              	.L16:
+  86:usbd_conf.c   ****         HAL_GPIO_DeInit(GPIOA, GPIO_PIN_12 | GPIO_PIN_11 | GPIO_PIN_9);
+ 366              		.loc 1 86 9 is_stmt 1 view .LVU108
+ 367 0012 194A     		ldr	r2, .L18+8
+  87:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_FS_EP1_OUT_IRQn);
+ 368              		.loc 1 87 9 is_stmt 0 view .LVU109
+ 369 0014 4FF4D051 		mov	r1, #6656
+ 370 0018 1848     		ldr	r0, .L18+12
+ 371              	.LVL20:
+  86:usbd_conf.c   ****         HAL_GPIO_DeInit(GPIOA, GPIO_PIN_12 | GPIO_PIN_11 | GPIO_PIN_9);
+ 372              		.loc 1 86 9 view .LVU110
+ 373 001a D2F8D830 		ldr	r3, [r2, #216]
+ 374 001e 23F00063 		bic	r3, r3, #134217728
+ 375 0022 C2F8D830 		str	r3, [r2, #216]
+  87:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_FS_EP1_OUT_IRQn);
+ 376              		.loc 1 87 9 is_stmt 1 view .LVU111
+ 377 0026 FFF7FEFF 		bl	HAL_GPIO_DeInit
+ 378              	.LVL21:
+  88:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_FS_EP1_IN_IRQn);
+ 379              		.loc 1 88 9 view .LVU112
+ 380 002a 6220     		movs	r0, #98
+ 381 002c FFF7FEFF 		bl	HAL_NVIC_DisableIRQ
+ 382              	.LVL22:
+  89:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_FS_IRQn);
+ 383              		.loc 1 89 9 view .LVU113
+ 384 0030 6320     		movs	r0, #99
+ 385 0032 FFF7FEFF 		bl	HAL_NVIC_DisableIRQ
+ARM GAS  /tmp/ccbPGhD2.s 			page 11
+
+
+ 386              	.LVL23:
+  90:usbd_conf.c   ****     }
+ 387              		.loc 1 90 9 view .LVU114
+ 388 0036 6520     		movs	r0, #101
+ 389              		.loc 1 100 1 is_stmt 0 view .LVU115
+ 390 0038 BDE80840 		pop	{r3, lr}
+ 391              		.cfi_remember_state
+ 392              		.cfi_restore 14
+ 393              		.cfi_restore 3
+ 394              		.cfi_def_cfa_offset 0
+  90:usbd_conf.c   ****     }
+ 395              		.loc 1 90 9 view .LVU116
+ 396 003c FFF7FEBF 		b	HAL_NVIC_DisableIRQ
+ 397              	.LVL24:
+ 398              	.L17:
+ 399              		.cfi_restore_state
+  94:usbd_conf.c   ****         HAL_GPIO_DeInit(GPIOB, GPIO_PIN_14 | GPIO_PIN_15);
+ 400              		.loc 1 94 9 is_stmt 1 view .LVU117
+ 401 0040 0D4A     		ldr	r2, .L18+8
+  95:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_HS_EP1_OUT_IRQn);
+ 402              		.loc 1 95 9 is_stmt 0 view .LVU118
+ 403 0042 4FF44041 		mov	r1, #49152
+ 404 0046 0E48     		ldr	r0, .L18+16
+ 405              	.LVL25:
+  94:usbd_conf.c   ****         HAL_GPIO_DeInit(GPIOB, GPIO_PIN_14 | GPIO_PIN_15);
+ 406              		.loc 1 94 9 view .LVU119
+ 407 0048 D2F8D830 		ldr	r3, [r2, #216]
+ 408 004c 23F00073 		bic	r3, r3, #33554432
+ 409 0050 C2F8D830 		str	r3, [r2, #216]
+  95:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_HS_EP1_OUT_IRQn);
+ 410              		.loc 1 95 9 is_stmt 1 view .LVU120
+ 411 0054 FFF7FEFF 		bl	HAL_GPIO_DeInit
+ 412              	.LVL26:
+  96:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_HS_EP1_IN_IRQn);
+ 413              		.loc 1 96 9 view .LVU121
+ 414 0058 4A20     		movs	r0, #74
+ 415 005a FFF7FEFF 		bl	HAL_NVIC_DisableIRQ
+ 416              	.LVL27:
+  97:usbd_conf.c   ****         HAL_NVIC_DisableIRQ(OTG_HS_IRQn);
+ 417              		.loc 1 97 9 view .LVU122
+ 418 005e 4B20     		movs	r0, #75
+ 419 0060 FFF7FEFF 		bl	HAL_NVIC_DisableIRQ
+ 420              	.LVL28:
+  98:usbd_conf.c   ****     }
+ 421              		.loc 1 98 9 view .LVU123
+ 422 0064 4D20     		movs	r0, #77
+ 423              		.loc 1 100 1 is_stmt 0 view .LVU124
+ 424 0066 BDE80840 		pop	{r3, lr}
+ 425              		.cfi_restore 14
+ 426              		.cfi_restore 3
+ 427              		.cfi_def_cfa_offset 0
+  98:usbd_conf.c   ****     }
+ 428              		.loc 1 98 9 view .LVU125
+ 429 006a FFF7FEBF 		b	HAL_NVIC_DisableIRQ
+ 430              	.LVL29:
+ 431              	.L19:
+ 432 006e 00BF     		.align	2
+ARM GAS  /tmp/ccbPGhD2.s 			page 12
+
+
+ 433              	.L18:
+ 434 0070 00000840 		.word	1074266112
+ 435 0074 00000440 		.word	1074003968
+ 436 0078 00440258 		.word	1476543488
+ 437 007c 00000258 		.word	1476526080
+ 438 0080 00040258 		.word	1476527104
+ 439              		.cfi_endproc
+ 440              	.LFE325:
+ 442              		.section	.text.HAL_PCD_SetupStageCallback,"ax",%progbits
+ 443              		.align	1
+ 444              		.p2align 2,,3
+ 445              		.global	HAL_PCD_SetupStageCallback
+ 446              		.syntax unified
+ 447              		.thumb
+ 448              		.thumb_func
+ 449              		.fpu fpv5-d16
+ 451              	HAL_PCD_SetupStageCallback:
+ 452              	.LVL30:
+ 453              	.LFB326:
+ 101:usbd_conf.c   **** 
+ 102:usbd_conf.c   **** /* -------------------------------------------------------------------------- */
+ 103:usbd_conf.c   **** /* PCD → USB Device Library callbacks                                         */
+ 104:usbd_conf.c   **** /* -------------------------------------------------------------------------- */
+ 105:usbd_conf.c   **** 
+ 106:usbd_conf.c   **** void HAL_PCD_SetupStageCallback(PCD_HandleTypeDef *hpcd)
+ 107:usbd_conf.c   **** {
+ 454              		.loc 1 107 1 is_stmt 1 view -0
+ 455              		.cfi_startproc
+ 456              		@ args = 0, pretend = 0, frame = 0
+ 457              		@ frame_needed = 0, uses_anonymous_args = 0
+ 458              		@ link register save eliminated.
+ 108:usbd_conf.c   ****     USBD_LL_SetupStage((USBD_HandleTypeDef *)hpcd->pData, (uint8_t *)hpcd->Setup);
+ 459              		.loc 1 108 5 view .LVU127
+ 460 0000 00F57171 		add	r1, r0, #964
+ 461 0004 D0F80404 		ldr	r0, [r0, #1028]
+ 462              	.LVL31:
+ 463              		.loc 1 108 5 is_stmt 0 view .LVU128
+ 464 0008 FFF7FEBF 		b	USBD_LL_SetupStage
+ 465              	.LVL32:
+ 466              		.loc 1 108 5 view .LVU129
+ 467              		.cfi_endproc
+ 468              	.LFE326:
+ 470              		.section	.text.HAL_PCD_DataOutStageCallback,"ax",%progbits
+ 471              		.align	1
+ 472              		.p2align 2,,3
+ 473              		.global	HAL_PCD_DataOutStageCallback
+ 474              		.syntax unified
+ 475              		.thumb
+ 476              		.thumb_func
+ 477              		.fpu fpv5-d16
+ 479              	HAL_PCD_DataOutStageCallback:
+ 480              	.LVL33:
+ 481              	.LFB327:
+ 109:usbd_conf.c   **** }
+ 110:usbd_conf.c   **** 
+ 111:usbd_conf.c   **** void HAL_PCD_DataOutStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum)
+ 112:usbd_conf.c   **** {
+ARM GAS  /tmp/ccbPGhD2.s 			page 13
+
+
+ 482              		.loc 1 112 1 is_stmt 1 view -0
+ 483              		.cfi_startproc
+ 484              		@ args = 0, pretend = 0, frame = 0
+ 485              		@ frame_needed = 0, uses_anonymous_args = 0
+ 486              		@ link register save eliminated.
+ 113:usbd_conf.c   ****     USBD_LL_DataOutStage((USBD_HandleTypeDef *)hpcd->pData, epnum,
+ 487              		.loc 1 113 5 view .LVU131
+ 488 0000 C1EBC103 		rsb	r3, r1, r1, lsl #3
+ 489 0004 00EB8303 		add	r3, r0, r3, lsl #2
+ 490 0008 D0F80404 		ldr	r0, [r0, #1028]
+ 491              	.LVL34:
+ 492              		.loc 1 113 5 is_stmt 0 view .LVU132
+ 493 000c D3F80822 		ldr	r2, [r3, #520]
+ 494 0010 FFF7FEBF 		b	USBD_LL_DataOutStage
+ 495              	.LVL35:
+ 496              		.loc 1 113 5 view .LVU133
+ 497              		.cfi_endproc
+ 498              	.LFE327:
+ 500              		.section	.text.HAL_PCD_DataInStageCallback,"ax",%progbits
+ 501              		.align	1
+ 502              		.p2align 2,,3
+ 503              		.global	HAL_PCD_DataInStageCallback
+ 504              		.syntax unified
+ 505              		.thumb
+ 506              		.thumb_func
+ 507              		.fpu fpv5-d16
+ 509              	HAL_PCD_DataInStageCallback:
+ 510              	.LVL36:
+ 511              	.LFB328:
+ 114:usbd_conf.c   ****                           hpcd->OUT_ep[epnum].xfer_buff);
+ 115:usbd_conf.c   **** }
+ 116:usbd_conf.c   **** 
+ 117:usbd_conf.c   **** void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum)
+ 118:usbd_conf.c   **** {
+ 512              		.loc 1 118 1 is_stmt 1 view -0
+ 513              		.cfi_startproc
+ 514              		@ args = 0, pretend = 0, frame = 0
+ 515              		@ frame_needed = 0, uses_anonymous_args = 0
+ 516              		@ link register save eliminated.
+ 119:usbd_conf.c   ****     USBD_LL_DataInStage((USBD_HandleTypeDef *)hpcd->pData, epnum,
+ 517              		.loc 1 119 5 view .LVU135
+ 518 0000 C1EBC103 		rsb	r3, r1, r1, lsl #3
+ 519 0004 00EB8303 		add	r3, r0, r3, lsl #2
+ 520 0008 D0F80404 		ldr	r0, [r0, #1028]
+ 521              	.LVL37:
+ 522              		.loc 1 119 5 is_stmt 0 view .LVU136
+ 523 000c 9A6C     		ldr	r2, [r3, #72]
+ 524 000e FFF7FEBF 		b	USBD_LL_DataInStage
+ 525              	.LVL38:
+ 526              		.loc 1 119 5 view .LVU137
+ 527              		.cfi_endproc
+ 528              	.LFE328:
+ 530 0012 00BF     		.section	.text.HAL_PCD_SOFCallback,"ax",%progbits
+ 531              		.align	1
+ 532              		.p2align 2,,3
+ 533              		.global	HAL_PCD_SOFCallback
+ 534              		.syntax unified
+ARM GAS  /tmp/ccbPGhD2.s 			page 14
+
+
+ 535              		.thumb
+ 536              		.thumb_func
+ 537              		.fpu fpv5-d16
+ 539              	HAL_PCD_SOFCallback:
+ 540              	.LVL39:
+ 541              	.LFB329:
+ 120:usbd_conf.c   ****                          hpcd->IN_ep[epnum].xfer_buff);
+ 121:usbd_conf.c   **** }
+ 122:usbd_conf.c   **** 
+ 123:usbd_conf.c   **** /* SOF is essential for the audio class — it drives the periodic transfer
+ 124:usbd_conf.c   ****    callback that feeds the isochronous IN endpoint with new audio data. */
+ 125:usbd_conf.c   **** void HAL_PCD_SOFCallback(PCD_HandleTypeDef *hpcd)
+ 126:usbd_conf.c   **** {
+ 542              		.loc 1 126 1 is_stmt 1 view -0
+ 543              		.cfi_startproc
+ 544              		@ args = 0, pretend = 0, frame = 0
+ 545              		@ frame_needed = 0, uses_anonymous_args = 0
+ 546              		@ link register save eliminated.
+ 127:usbd_conf.c   ****     USBD_LL_SOF((USBD_HandleTypeDef *)hpcd->pData);
+ 547              		.loc 1 127 5 view .LVU139
+ 548 0000 D0F80404 		ldr	r0, [r0, #1028]
+ 549              	.LVL40:
+ 550              		.loc 1 127 5 is_stmt 0 view .LVU140
+ 551 0004 FFF7FEBF 		b	USBD_LL_SOF
+ 552              	.LVL41:
+ 553              		.cfi_endproc
+ 554              	.LFE329:
+ 556              		.section	.text.HAL_PCD_ResetCallback,"ax",%progbits
+ 557              		.align	1
+ 558              		.p2align 2,,3
+ 559              		.global	HAL_PCD_ResetCallback
+ 560              		.syntax unified
+ 561              		.thumb
+ 562              		.thumb_func
+ 563              		.fpu fpv5-d16
+ 565              	HAL_PCD_ResetCallback:
+ 566              	.LVL42:
+ 567              	.LFB330:
+ 128:usbd_conf.c   **** }
+ 129:usbd_conf.c   **** 
+ 130:usbd_conf.c   **** void HAL_PCD_ResetCallback(PCD_HandleTypeDef *hpcd)
+ 131:usbd_conf.c   **** {
+ 568              		.loc 1 131 1 is_stmt 1 view -0
+ 569              		.cfi_startproc
+ 570              		@ args = 0, pretend = 0, frame = 0
+ 571              		@ frame_needed = 0, uses_anonymous_args = 0
+ 132:usbd_conf.c   ****     USBD_SpeedTypeDef speed = USBD_SPEED_FULL;
+ 572              		.loc 1 132 5 view .LVU142
+ 133:usbd_conf.c   ****     if(hpcd->Init.speed == PCD_SPEED_HIGH)       speed = USBD_SPEED_HIGH;
+ 573              		.loc 1 133 5 view .LVU143
+ 574              		.loc 1 133 18 is_stmt 0 view .LVU144
+ 575 0000 C168     		ldr	r1, [r0, #12]
+ 131:usbd_conf.c   ****     USBD_SpeedTypeDef speed = USBD_SPEED_FULL;
+ 576              		.loc 1 131 1 view .LVU145
+ 577 0002 10B5     		push	{r4, lr}
+ 578              		.cfi_def_cfa_offset 8
+ 579              		.cfi_offset 4, -8
+ARM GAS  /tmp/ccbPGhD2.s 			page 15
+
+
+ 580              		.cfi_offset 14, -4
+ 131:usbd_conf.c   ****     USBD_SpeedTypeDef speed = USBD_SPEED_FULL;
+ 581              		.loc 1 131 1 view .LVU146
+ 582 0004 0446     		mov	r4, r0
+ 583              		.loc 1 133 7 view .LVU147
+ 584 0006 19B1     		cbz	r1, .L25
+ 134:usbd_conf.c   ****     else if(hpcd->Init.speed == PCD_SPEED_FULL)  speed = USBD_SPEED_FULL;
+ 585              		.loc 1 134 10 is_stmt 1 view .LVU148
+ 586              		.loc 1 134 12 is_stmt 0 view .LVU149
+ 587 0008 0229     		cmp	r1, #2
+ 588 000a 00D0     		beq	.L28
+ 589              	.L26:
+  24:usbd_conf.c   **** 
+ 590              		.loc 1 24 28 is_stmt 1 view .LVU150
+  24:usbd_conf.c   **** 
+ 591              		.loc 1 24 38 view .LVU151
+  24:usbd_conf.c   **** 
+ 592              		.loc 1 24 33 view .LVU152
+  24:usbd_conf.c   **** 
+ 593              		.loc 1 24 28 view .LVU153
+  24:usbd_conf.c   **** 
+ 594              		.loc 1 24 38 view .LVU154
+  24:usbd_conf.c   **** 
+ 595              		.loc 1 24 33 view .LVU155
+ 596 000c FEE7     		b	.L26
+ 597              	.L28:
+ 598              		.loc 1 134 56 is_stmt 0 view .LVU156
+ 599 000e 0121     		movs	r1, #1
+ 600              	.L25:
+ 601              	.LVL43:
+ 135:usbd_conf.c   ****     else                                          Error_Handler();
+ 136:usbd_conf.c   ****     USBD_LL_SetSpeed((USBD_HandleTypeDef *)hpcd->pData, speed);
+ 602              		.loc 1 136 5 is_stmt 1 view .LVU157
+ 603 0010 D4F80404 		ldr	r0, [r4, #1028]
+ 604              	.LVL44:
+ 605              		.loc 1 136 5 is_stmt 0 view .LVU158
+ 606 0014 FFF7FEFF 		bl	USBD_LL_SetSpeed
+ 607              	.LVL45:
+ 137:usbd_conf.c   ****     USBD_LL_Reset((USBD_HandleTypeDef *)hpcd->pData);
+ 608              		.loc 1 137 5 is_stmt 1 view .LVU159
+ 609 0018 D4F80404 		ldr	r0, [r4, #1028]
+ 138:usbd_conf.c   **** }
+ 610              		.loc 1 138 1 is_stmt 0 view .LVU160
+ 611 001c BDE81040 		pop	{r4, lr}
+ 612              		.cfi_restore 14
+ 613              		.cfi_restore 4
+ 614              		.cfi_def_cfa_offset 0
+ 615              	.LVL46:
+ 137:usbd_conf.c   ****     USBD_LL_Reset((USBD_HandleTypeDef *)hpcd->pData);
+ 616              		.loc 1 137 5 view .LVU161
+ 617 0020 FFF7FEBF 		b	USBD_LL_Reset
+ 618              	.LVL47:
+ 619              		.cfi_endproc
+ 620              	.LFE330:
+ 622              		.section	.text.HAL_PCD_SuspendCallback,"ax",%progbits
+ 623              		.align	1
+ 624              		.p2align 2,,3
+ARM GAS  /tmp/ccbPGhD2.s 			page 16
+
+
+ 625              		.global	HAL_PCD_SuspendCallback
+ 626              		.syntax unified
+ 627              		.thumb
+ 628              		.thumb_func
+ 629              		.fpu fpv5-d16
+ 631              	HAL_PCD_SuspendCallback:
+ 632              	.LVL48:
+ 633              	.LFB331:
+ 139:usbd_conf.c   **** 
+ 140:usbd_conf.c   **** void HAL_PCD_SuspendCallback(PCD_HandleTypeDef *hpcd)
+ 141:usbd_conf.c   **** {
+ 634              		.loc 1 141 1 is_stmt 1 view -0
+ 635              		.cfi_startproc
+ 636              		@ args = 0, pretend = 0, frame = 0
+ 637              		@ frame_needed = 0, uses_anonymous_args = 0
+ 142:usbd_conf.c   ****     USBD_LL_Suspend((USBD_HandleTypeDef *)hpcd->pData);
+ 638              		.loc 1 142 5 view .LVU163
+ 141:usbd_conf.c   ****     USBD_LL_Suspend((USBD_HandleTypeDef *)hpcd->pData);
+ 639              		.loc 1 141 1 is_stmt 0 view .LVU164
+ 640 0000 10B5     		push	{r4, lr}
+ 641              		.cfi_def_cfa_offset 8
+ 642              		.cfi_offset 4, -8
+ 643              		.cfi_offset 14, -4
+ 141:usbd_conf.c   ****     USBD_LL_Suspend((USBD_HandleTypeDef *)hpcd->pData);
+ 644              		.loc 1 141 1 view .LVU165
+ 645 0002 0446     		mov	r4, r0
+ 646              		.loc 1 142 5 view .LVU166
+ 647 0004 D0F80404 		ldr	r0, [r0, #1028]
+ 648              	.LVL49:
+ 649              		.loc 1 142 5 view .LVU167
+ 650 0008 FFF7FEFF 		bl	USBD_LL_Suspend
+ 651              	.LVL50:
+ 143:usbd_conf.c   ****     __HAL_PCD_GATE_PHYCLOCK(hpcd);
+ 652              		.loc 1 143 5 is_stmt 1 view .LVU168
+ 653 000c 2268     		ldr	r2, [r4]
+ 654 000e D2F8003E 		ldr	r3, [r2, #3584]
+ 655 0012 43F00103 		orr	r3, r3, #1
+ 656 0016 C2F8003E 		str	r3, [r2, #3584]
+ 144:usbd_conf.c   ****     if(hpcd->Init.low_power_enable)
+ 657              		.loc 1 144 5 view .LVU169
+ 658              		.loc 1 144 7 is_stmt 0 view .LVU170
+ 659 001a 236A     		ldr	r3, [r4, #32]
+ 660 001c 23B1     		cbz	r3, .L30
+ 145:usbd_conf.c   ****     {
+ 146:usbd_conf.c   ****         SCB->SCR |= (uint32_t)(SCB_SCR_SLEEPDEEP_Msk | SCB_SCR_SLEEPONEXIT_Msk);
+ 661              		.loc 1 146 9 is_stmt 1 view .LVU171
+ 662              		.loc 1 146 18 is_stmt 0 view .LVU172
+ 663 001e 034A     		ldr	r2, .L36
+ 664 0020 1369     		ldr	r3, [r2, #16]
+ 665 0022 43F00603 		orr	r3, r3, #6
+ 666 0026 1361     		str	r3, [r2, #16]
+ 667              	.L30:
+ 147:usbd_conf.c   ****     }
+ 148:usbd_conf.c   **** }
+ 668              		.loc 1 148 1 view .LVU173
+ 669 0028 10BD     		pop	{r4, pc}
+ 670              	.LVL51:
+ARM GAS  /tmp/ccbPGhD2.s 			page 17
+
+
+ 671              	.L37:
+ 672              		.loc 1 148 1 view .LVU174
+ 673 002a 00BF     		.align	2
+ 674              	.L36:
+ 675 002c 00ED00E0 		.word	-536810240
+ 676              		.cfi_endproc
+ 677              	.LFE331:
+ 679              		.section	.text.HAL_PCD_ResumeCallback,"ax",%progbits
+ 680              		.align	1
+ 681              		.p2align 2,,3
+ 682              		.global	HAL_PCD_ResumeCallback
+ 683              		.syntax unified
+ 684              		.thumb
+ 685              		.thumb_func
+ 686              		.fpu fpv5-d16
+ 688              	HAL_PCD_ResumeCallback:
+ 689              	.LVL52:
+ 690              	.LFB332:
+ 149:usbd_conf.c   **** 
+ 150:usbd_conf.c   **** void HAL_PCD_ResumeCallback(PCD_HandleTypeDef *hpcd)
+ 151:usbd_conf.c   **** {
+ 691              		.loc 1 151 1 is_stmt 1 view -0
+ 692              		.cfi_startproc
+ 693              		@ args = 0, pretend = 0, frame = 0
+ 694              		@ frame_needed = 0, uses_anonymous_args = 0
+ 695              		@ link register save eliminated.
+ 152:usbd_conf.c   ****     USBD_LL_Resume((USBD_HandleTypeDef *)hpcd->pData);
+ 696              		.loc 1 152 5 view .LVU176
+ 697 0000 D0F80404 		ldr	r0, [r0, #1028]
+ 698              	.LVL53:
+ 699              		.loc 1 152 5 is_stmt 0 view .LVU177
+ 700 0004 FFF7FEBF 		b	USBD_LL_Resume
+ 701              	.LVL54:
+ 702              		.cfi_endproc
+ 703              	.LFE332:
+ 705              		.section	.text.HAL_PCD_ISOOUTIncompleteCallback,"ax",%progbits
+ 706              		.align	1
+ 707              		.p2align 2,,3
+ 708              		.global	HAL_PCD_ISOOUTIncompleteCallback
+ 709              		.syntax unified
+ 710              		.thumb
+ 711              		.thumb_func
+ 712              		.fpu fpv5-d16
+ 714              	HAL_PCD_ISOOUTIncompleteCallback:
+ 715              	.LVL55:
+ 716              	.LFB333:
+ 153:usbd_conf.c   **** }
+ 154:usbd_conf.c   **** 
+ 155:usbd_conf.c   **** void HAL_PCD_ISOOUTIncompleteCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum)
+ 156:usbd_conf.c   **** {
+ 717              		.loc 1 156 1 is_stmt 1 view -0
+ 718              		.cfi_startproc
+ 719              		@ args = 0, pretend = 0, frame = 0
+ 720              		@ frame_needed = 0, uses_anonymous_args = 0
+ 721              		@ link register save eliminated.
+ 157:usbd_conf.c   ****     USBD_LL_IsoOUTIncomplete((USBD_HandleTypeDef *)hpcd->pData, epnum);
+ 722              		.loc 1 157 5 view .LVU179
+ARM GAS  /tmp/ccbPGhD2.s 			page 18
+
+
+ 723 0000 D0F80404 		ldr	r0, [r0, #1028]
+ 724              	.LVL56:
+ 725              		.loc 1 157 5 is_stmt 0 view .LVU180
+ 726 0004 FFF7FEBF 		b	USBD_LL_IsoOUTIncomplete
+ 727              	.LVL57:
+ 728              		.loc 1 157 5 view .LVU181
+ 729              		.cfi_endproc
+ 730              	.LFE333:
+ 732              		.section	.text.HAL_PCD_ISOINIncompleteCallback,"ax",%progbits
+ 733              		.align	1
+ 734              		.p2align 2,,3
+ 735              		.global	HAL_PCD_ISOINIncompleteCallback
+ 736              		.syntax unified
+ 737              		.thumb
+ 738              		.thumb_func
+ 739              		.fpu fpv5-d16
+ 741              	HAL_PCD_ISOINIncompleteCallback:
+ 742              	.LVL58:
+ 743              	.LFB334:
+ 158:usbd_conf.c   **** }
+ 159:usbd_conf.c   **** 
+ 160:usbd_conf.c   **** void HAL_PCD_ISOINIncompleteCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum)
+ 161:usbd_conf.c   **** {
+ 744              		.loc 1 161 1 is_stmt 1 view -0
+ 745              		.cfi_startproc
+ 746              		@ args = 0, pretend = 0, frame = 0
+ 747              		@ frame_needed = 0, uses_anonymous_args = 0
+ 748              		@ link register save eliminated.
+ 162:usbd_conf.c   ****     USBD_LL_IsoINIncomplete((USBD_HandleTypeDef *)hpcd->pData, epnum);
+ 749              		.loc 1 162 5 view .LVU183
+ 750 0000 D0F80404 		ldr	r0, [r0, #1028]
+ 751              	.LVL59:
+ 752              		.loc 1 162 5 is_stmt 0 view .LVU184
+ 753 0004 FFF7FEBF 		b	USBD_LL_IsoINIncomplete
+ 754              	.LVL60:
+ 755              		.loc 1 162 5 view .LVU185
+ 756              		.cfi_endproc
+ 757              	.LFE334:
+ 759              		.section	.text.HAL_PCD_ConnectCallback,"ax",%progbits
+ 760              		.align	1
+ 761              		.p2align 2,,3
+ 762              		.global	HAL_PCD_ConnectCallback
+ 763              		.syntax unified
+ 764              		.thumb
+ 765              		.thumb_func
+ 766              		.fpu fpv5-d16
+ 768              	HAL_PCD_ConnectCallback:
+ 769              	.LVL61:
+ 770              	.LFB335:
+ 163:usbd_conf.c   **** }
+ 164:usbd_conf.c   **** 
+ 165:usbd_conf.c   **** void HAL_PCD_ConnectCallback(PCD_HandleTypeDef *hpcd)
+ 166:usbd_conf.c   **** {
+ 771              		.loc 1 166 1 is_stmt 1 view -0
+ 772              		.cfi_startproc
+ 773              		@ args = 0, pretend = 0, frame = 0
+ 774              		@ frame_needed = 0, uses_anonymous_args = 0
+ARM GAS  /tmp/ccbPGhD2.s 			page 19
+
+
+ 775              		@ link register save eliminated.
+ 167:usbd_conf.c   ****     USBD_LL_DevConnected((USBD_HandleTypeDef *)hpcd->pData);
+ 776              		.loc 1 167 5 view .LVU187
+ 777 0000 D0F80404 		ldr	r0, [r0, #1028]
+ 778              	.LVL62:
+ 779              		.loc 1 167 5 is_stmt 0 view .LVU188
+ 780 0004 FFF7FEBF 		b	USBD_LL_DevConnected
+ 781              	.LVL63:
+ 782              		.cfi_endproc
+ 783              	.LFE335:
+ 785              		.section	.text.HAL_PCD_DisconnectCallback,"ax",%progbits
+ 786              		.align	1
+ 787              		.p2align 2,,3
+ 788              		.global	HAL_PCD_DisconnectCallback
+ 789              		.syntax unified
+ 790              		.thumb
+ 791              		.thumb_func
+ 792              		.fpu fpv5-d16
+ 794              	HAL_PCD_DisconnectCallback:
+ 795              	.LVL64:
+ 796              	.LFB336:
+ 168:usbd_conf.c   **** }
+ 169:usbd_conf.c   **** 
+ 170:usbd_conf.c   **** void HAL_PCD_DisconnectCallback(PCD_HandleTypeDef *hpcd)
+ 171:usbd_conf.c   **** {
+ 797              		.loc 1 171 1 is_stmt 1 view -0
+ 798              		.cfi_startproc
+ 799              		@ args = 0, pretend = 0, frame = 0
+ 800              		@ frame_needed = 0, uses_anonymous_args = 0
+ 801              		@ link register save eliminated.
+ 172:usbd_conf.c   ****     USBD_LL_DevDisconnected((USBD_HandleTypeDef *)hpcd->pData);
+ 802              		.loc 1 172 5 view .LVU190
+ 803 0000 D0F80404 		ldr	r0, [r0, #1028]
+ 804              	.LVL65:
+ 805              		.loc 1 172 5 is_stmt 0 view .LVU191
+ 806 0004 FFF7FEBF 		b	USBD_LL_DevDisconnected
+ 807              	.LVL66:
+ 808              		.cfi_endproc
+ 809              	.LFE336:
+ 811              		.section	.text.USBD_LL_Init,"ax",%progbits
+ 812              		.align	1
+ 813              		.p2align 2,,3
+ 814              		.global	USBD_LL_Init
+ 815              		.syntax unified
+ 816              		.thumb
+ 817              		.thumb_func
+ 818              		.fpu fpv5-d16
+ 820              	USBD_LL_Init:
+ 821              	.LVL67:
+ 822              	.LFB337:
+ 173:usbd_conf.c   **** }
+ 174:usbd_conf.c   **** 
+ 175:usbd_conf.c   **** /* -------------------------------------------------------------------------- */
+ 176:usbd_conf.c   **** /* USB Device Library → PCD (LL driver interface)                             */
+ 177:usbd_conf.c   **** /* -------------------------------------------------------------------------- */
+ 178:usbd_conf.c   **** 
+ 179:usbd_conf.c   **** USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
+ARM GAS  /tmp/ccbPGhD2.s 			page 20
+
+
+ 180:usbd_conf.c   **** {
+ 823              		.loc 1 180 1 is_stmt 1 view -0
+ 824              		.cfi_startproc
+ 825              		@ args = 0, pretend = 0, frame = 0
+ 826              		@ frame_needed = 0, uses_anonymous_args = 0
+ 181:usbd_conf.c   ****     if(pdev->id == DEVICE_FS)
+ 827              		.loc 1 181 5 view .LVU193
+ 180:usbd_conf.c   ****     if(pdev->id == DEVICE_FS)
+ 828              		.loc 1 180 1 is_stmt 0 view .LVU194
+ 829 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 830              		.cfi_def_cfa_offset 24
+ 831              		.cfi_offset 3, -24
+ 832              		.cfi_offset 4, -20
+ 833              		.cfi_offset 5, -16
+ 834              		.cfi_offset 6, -12
+ 835              		.cfi_offset 7, -8
+ 836              		.cfi_offset 14, -4
+ 837              		.loc 1 181 12 view .LVU195
+ 838 0002 0678     		ldrb	r6, [r0]	@ zero_extendqisi2
+ 180:usbd_conf.c   ****     if(pdev->id == DEVICE_FS)
+ 839              		.loc 1 180 1 view .LVU196
+ 840 0004 0446     		mov	r4, r0
+ 841              		.loc 1 181 7 view .LVU197
+ 842 0006 1EB1     		cbz	r6, .L51
+ 182:usbd_conf.c   ****     {
+ 183:usbd_conf.c   ****         hpcd_USB_OTG_FS.pData = pdev;
+ 184:usbd_conf.c   ****         pdev->pData           = &hpcd_USB_OTG_FS;
+ 185:usbd_conf.c   **** 
+ 186:usbd_conf.c   ****         hpcd_USB_OTG_FS.Instance                     = USB_OTG_FS;
+ 187:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.dev_endpoints           = 9;
+ 188:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.speed                   = PCD_SPEED_FULL;
+ 189:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.dma_enable              = DISABLE;
+ 190:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.phy_itface              = PCD_PHY_EMBEDDED;
+ 191:usbd_conf.c   **** 
+ 192:usbd_conf.c   ****         /* ENABLE SOF — the USBD_AUDIO_SOF() callback drives the periodic
+ 193:usbd_conf.c   ****            audio data feed on the isochronous IN endpoint.  Without SOF,
+ 194:usbd_conf.c   ****            audio streaming will not start. */
+ 195:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.Sof_enable              = ENABLE;
+ 196:usbd_conf.c   **** 
+ 197:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.low_power_enable        = DISABLE;
+ 198:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.lpm_enable              = DISABLE;
+ 199:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.battery_charging_enable = ENABLE;
+ 200:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.vbus_sensing_enable     = ENABLE;
+ 201:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.use_dedicated_ep1       = DISABLE;
+ 202:usbd_conf.c   **** 
+ 203:usbd_conf.c   ****         if(HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK) { Error_Handler(); }
+ 204:usbd_conf.c   **** 
+ 205:usbd_conf.c   ****         /* FIFO allocation (in 32-bit words, total FS FIFO = 320 words = 1280 B):
+ 206:usbd_conf.c   ****              Rx FIFO   = 0x80 words (128 * 4 = 512 B) — shared receive FIFO
+ 207:usbd_conf.c   ****              TX0 FIFO  = 0x40 words (64  * 4 = 256 B) — EP0 control
+ 208:usbd_conf.c   ****              TX1 FIFO  = 0xC0 words (192 * 4 = 768 B) — EP1 IN audio
+ 209:usbd_conf.c   ****                                                           (192 B/packet * 2 = 384 B min;
+ 210:usbd_conf.c   ****                                                            0xC0 words = 768 B gives 2-packet headro
+ 211:usbd_conf.c   ****            Total used = 0x80 + 0x40 + 0xC0 = 0x140 = 320 words ✓
+ 212:usbd_conf.c   ****         */
+ 213:usbd_conf.c   ****         HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x80);
+ 214:usbd_conf.c   ****         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x40);
+ARM GAS  /tmp/ccbPGhD2.s 			page 21
+
+
+ 215:usbd_conf.c   ****         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0xC0);
+ 216:usbd_conf.c   ****     }
+ 217:usbd_conf.c   **** 
+ 218:usbd_conf.c   ****     if(pdev->id == DEVICE_HS)
+ 843              		.loc 1 218 5 is_stmt 1 view .LVU198
+ 844              		.loc 1 218 7 is_stmt 0 view .LVU199
+ 845 0008 012E     		cmp	r6, #1
+ 846 000a 2BD0     		beq	.L52
+ 847              	.LVL68:
+ 848              	.L47:
+ 219:usbd_conf.c   ****     {
+ 220:usbd_conf.c   ****         hpcd_USB_OTG_HS.pData = pdev;
+ 221:usbd_conf.c   ****         pdev->pData           = &hpcd_USB_OTG_HS;
+ 222:usbd_conf.c   **** 
+ 223:usbd_conf.c   ****         hpcd_USB_OTG_HS.Instance                     = USB_OTG_HS;
+ 224:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.dev_endpoints           = 9;
+ 225:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.speed                   = PCD_SPEED_FULL;
+ 226:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.dma_enable              = DISABLE;
+ 227:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.phy_itface              = USB_OTG_EMBEDDED_PHY;
+ 228:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.Sof_enable              = ENABLE;
+ 229:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.low_power_enable        = DISABLE;
+ 230:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.lpm_enable              = DISABLE;
+ 231:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.battery_charging_enable = ENABLE;
+ 232:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.vbus_sensing_enable     = DISABLE;
+ 233:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.use_dedicated_ep1       = DISABLE;
+ 234:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.use_external_vbus       = DISABLE;
+ 235:usbd_conf.c   **** 
+ 236:usbd_conf.c   ****         if(HAL_PCD_Init(&hpcd_USB_OTG_HS) != HAL_OK) { Error_Handler(); }
+ 237:usbd_conf.c   **** 
+ 238:usbd_conf.c   ****         HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_HS, 0x200);
+ 239:usbd_conf.c   ****         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 0, 0x80);
+ 240:usbd_conf.c   ****         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 1, 0x174);
+ 241:usbd_conf.c   ****     }
+ 242:usbd_conf.c   **** 
+ 243:usbd_conf.c   ****     return USBD_OK;
+ 849              		.loc 1 243 5 is_stmt 1 view .LVU200
+ 244:usbd_conf.c   **** }
+ 850              		.loc 1 244 1 is_stmt 0 view .LVU201
+ 851 000c 0020     		movs	r0, #0
+ 852 000e F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 853              	.LVL69:
+ 854              	.L51:
+ 183:usbd_conf.c   ****         pdev->pData           = &hpcd_USB_OTG_FS;
+ 855              		.loc 1 183 9 is_stmt 1 view .LVU202
+ 183:usbd_conf.c   ****         pdev->pData           = &hpcd_USB_OTG_FS;
+ 856              		.loc 1 183 31 is_stmt 0 view .LVU203
+ 857 0010 2A4D     		ldr	r5, .L53
+ 188:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.dma_enable              = DISABLE;
+ 858              		.loc 1 188 54 view .LVU204
+ 859 0012 0223     		movs	r3, #2
+ 195:usbd_conf.c   **** 
+ 860              		.loc 1 195 54 view .LVU205
+ 861 0014 0127     		movs	r7, #1
+ 186:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.dev_endpoints           = 9;
+ 862              		.loc 1 186 54 view .LVU206
+ 863 0016 2A4A     		ldr	r2, .L53+4
+ 188:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.dma_enable              = DISABLE;
+ARM GAS  /tmp/ccbPGhD2.s 			page 22
+
+
+ 864              		.loc 1 188 54 view .LVU207
+ 865 0018 EB60     		str	r3, [r5, #12]
+ 190:usbd_conf.c   **** 
+ 866              		.loc 1 190 54 view .LVU208
+ 867 001a AB61     		str	r3, [r5, #24]
+ 187:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.speed                   = PCD_SPEED_FULL;
+ 868              		.loc 1 187 54 view .LVU209
+ 869 001c 0923     		movs	r3, #9
+ 183:usbd_conf.c   ****         pdev->pData           = &hpcd_USB_OTG_FS;
+ 870              		.loc 1 183 31 view .LVU210
+ 871 001e C5F80404 		str	r0, [r5, #1028]
+ 184:usbd_conf.c   **** 
+ 872              		.loc 1 184 9 is_stmt 1 view .LVU211
+ 184:usbd_conf.c   **** 
+ 873              		.loc 1 184 31 is_stmt 0 view .LVU212
+ 874 0022 C0F89852 		str	r5, [r0, #664]
+ 186:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.dev_endpoints           = 9;
+ 875              		.loc 1 186 9 is_stmt 1 view .LVU213
+ 187:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.speed                   = PCD_SPEED_FULL;
+ 876              		.loc 1 187 9 view .LVU214
+ 203:usbd_conf.c   **** 
+ 877              		.loc 1 203 12 is_stmt 0 view .LVU215
+ 878 0026 2846     		mov	r0, r5
+ 879              	.LVL70:
+ 186:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.dev_endpoints           = 9;
+ 880              		.loc 1 186 54 view .LVU216
+ 881 0028 2A60     		str	r2, [r5]
+ 189:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.phy_itface              = PCD_PHY_EMBEDDED;
+ 882              		.loc 1 189 54 view .LVU217
+ 883 002a 2E61     		str	r6, [r5, #16]
+ 187:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.speed                   = PCD_SPEED_FULL;
+ 884              		.loc 1 187 54 view .LVU218
+ 885 002c 6B60     		str	r3, [r5, #4]
+ 188:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.dma_enable              = DISABLE;
+ 886              		.loc 1 188 9 is_stmt 1 view .LVU219
+ 189:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.phy_itface              = PCD_PHY_EMBEDDED;
+ 887              		.loc 1 189 9 view .LVU220
+ 190:usbd_conf.c   **** 
+ 888              		.loc 1 190 9 view .LVU221
+ 195:usbd_conf.c   **** 
+ 889              		.loc 1 195 9 view .LVU222
+ 197:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.lpm_enable              = DISABLE;
+ 890              		.loc 1 197 9 view .LVU223
+ 198:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.battery_charging_enable = ENABLE;
+ 891              		.loc 1 198 9 view .LVU224
+ 199:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.vbus_sensing_enable     = ENABLE;
+ 892              		.loc 1 199 9 view .LVU225
+ 200:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.use_dedicated_ep1       = DISABLE;
+ 893              		.loc 1 200 9 view .LVU226
+ 201:usbd_conf.c   **** 
+ 894              		.loc 1 201 9 view .LVU227
+ 203:usbd_conf.c   **** 
+ 895              		.loc 1 203 9 view .LVU228
+ 197:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.lpm_enable              = DISABLE;
+ 896              		.loc 1 197 54 is_stmt 0 view .LVU229
+ 897 002e C5E90776 		strd	r7, r6, [r5, #28]
+ 199:usbd_conf.c   ****         hpcd_USB_OTG_FS.Init.vbus_sensing_enable     = ENABLE;
+ARM GAS  /tmp/ccbPGhD2.s 			page 23
+
+
+ 898              		.loc 1 199 54 view .LVU230
+ 899 0032 C5E90967 		strd	r6, r7, [r5, #36]
+ 201:usbd_conf.c   **** 
+ 900              		.loc 1 201 54 view .LVU231
+ 901 0036 C5E90B76 		strd	r7, r6, [r5, #44]
+ 203:usbd_conf.c   **** 
+ 902              		.loc 1 203 12 view .LVU232
+ 903 003a FFF7FEFF 		bl	HAL_PCD_Init
+ 904              	.LVL71:
+ 203:usbd_conf.c   **** 
+ 905              		.loc 1 203 11 view .LVU233
+ 906 003e 00B1     		cbz	r0, .L45
+ 907              	.L46:
+  24:usbd_conf.c   **** 
+ 908              		.loc 1 24 28 is_stmt 1 view .LVU234
+  24:usbd_conf.c   **** 
+ 909              		.loc 1 24 38 view .LVU235
+  24:usbd_conf.c   **** 
+ 910              		.loc 1 24 33 view .LVU236
+  24:usbd_conf.c   **** 
+ 911              		.loc 1 24 28 view .LVU237
+  24:usbd_conf.c   **** 
+ 912              		.loc 1 24 38 view .LVU238
+  24:usbd_conf.c   **** 
+ 913              		.loc 1 24 33 view .LVU239
+ 914 0040 FEE7     		b	.L46
+ 915              	.L45:
+ 213:usbd_conf.c   ****         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x40);
+ 916              		.loc 1 213 9 view .LVU240
+ 917 0042 8021     		movs	r1, #128
+ 918 0044 2846     		mov	r0, r5
+ 919 0046 FFF7FEFF 		bl	HAL_PCDEx_SetRxFiFo
+ 920              	.LVL72:
+ 214:usbd_conf.c   ****         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0xC0);
+ 921              		.loc 1 214 9 view .LVU241
+ 922 004a 3146     		mov	r1, r6
+ 923 004c 4022     		movs	r2, #64
+ 924 004e 2846     		mov	r0, r5
+ 925 0050 FFF7FEFF 		bl	HAL_PCDEx_SetTxFiFo
+ 926              	.LVL73:
+ 215:usbd_conf.c   ****     }
+ 927              		.loc 1 215 9 view .LVU242
+ 928 0054 C022     		movs	r2, #192
+ 929 0056 3946     		mov	r1, r7
+ 930 0058 2846     		mov	r0, r5
+ 931 005a FFF7FEFF 		bl	HAL_PCDEx_SetTxFiFo
+ 932              	.LVL74:
+ 218:usbd_conf.c   ****     {
+ 933              		.loc 1 218 12 is_stmt 0 view .LVU243
+ 934 005e 2678     		ldrb	r6, [r4]	@ zero_extendqisi2
+ 218:usbd_conf.c   ****     {
+ 935              		.loc 1 218 5 is_stmt 1 view .LVU244
+ 218:usbd_conf.c   ****     {
+ 936              		.loc 1 218 7 is_stmt 0 view .LVU245
+ 937 0060 012E     		cmp	r6, #1
+ 938 0062 D3D1     		bne	.L47
+ 939              	.L52:
+ARM GAS  /tmp/ccbPGhD2.s 			page 24
+
+
+ 220:usbd_conf.c   ****         pdev->pData           = &hpcd_USB_OTG_HS;
+ 940              		.loc 1 220 9 is_stmt 1 view .LVU246
+ 220:usbd_conf.c   ****         pdev->pData           = &hpcd_USB_OTG_HS;
+ 941              		.loc 1 220 31 is_stmt 0 view .LVU247
+ 942 0064 174D     		ldr	r5, .L53+8
+ 226:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.phy_itface              = USB_OTG_EMBEDDED_PHY;
+ 943              		.loc 1 226 54 view .LVU248
+ 944 0066 0023     		movs	r3, #0
+ 225:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.dma_enable              = DISABLE;
+ 945              		.loc 1 225 54 view .LVU249
+ 946 0068 0222     		movs	r2, #2
+ 223:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.dev_endpoints           = 9;
+ 947              		.loc 1 223 54 view .LVU250
+ 948 006a 1749     		ldr	r1, .L53+12
+ 226:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.phy_itface              = USB_OTG_EMBEDDED_PHY;
+ 949              		.loc 1 226 54 view .LVU251
+ 950 006c 2B61     		str	r3, [r5, #16]
+ 236:usbd_conf.c   **** 
+ 951              		.loc 1 236 12 view .LVU252
+ 952 006e 2846     		mov	r0, r5
+ 234:usbd_conf.c   **** 
+ 953              		.loc 1 234 54 view .LVU253
+ 954 0070 6B63     		str	r3, [r5, #52]
+ 220:usbd_conf.c   ****         pdev->pData           = &hpcd_USB_OTG_HS;
+ 955              		.loc 1 220 31 view .LVU254
+ 956 0072 C5F80444 		str	r4, [r5, #1028]
+ 221:usbd_conf.c   **** 
+ 957              		.loc 1 221 9 is_stmt 1 view .LVU255
+ 221:usbd_conf.c   **** 
+ 958              		.loc 1 221 31 is_stmt 0 view .LVU256
+ 959 0076 C4F89852 		str	r5, [r4, #664]
+ 223:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.dev_endpoints           = 9;
+ 960              		.loc 1 223 9 is_stmt 1 view .LVU257
+ 224:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.speed                   = PCD_SPEED_FULL;
+ 961              		.loc 1 224 9 view .LVU258
+ 223:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.dev_endpoints           = 9;
+ 962              		.loc 1 223 54 is_stmt 0 view .LVU259
+ 963 007a 2960     		str	r1, [r5]
+ 225:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.dma_enable              = DISABLE;
+ 964              		.loc 1 225 54 view .LVU260
+ 965 007c EA60     		str	r2, [r5, #12]
+ 227:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.Sof_enable              = ENABLE;
+ 966              		.loc 1 227 54 view .LVU261
+ 967 007e AA61     		str	r2, [r5, #24]
+ 229:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.lpm_enable              = DISABLE;
+ 968              		.loc 1 229 54 view .LVU262
+ 969 0080 C5E90763 		strd	r6, r3, [r5, #28]
+ 231:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.vbus_sensing_enable     = DISABLE;
+ 970              		.loc 1 231 54 view .LVU263
+ 971 0084 C5E90936 		strd	r3, r6, [r5, #36]
+ 233:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.use_external_vbus       = DISABLE;
+ 972              		.loc 1 233 54 view .LVU264
+ 973 0088 C5E90B33 		strd	r3, r3, [r5, #44]
+ 224:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.speed                   = PCD_SPEED_FULL;
+ 974              		.loc 1 224 54 view .LVU265
+ 975 008c 0923     		movs	r3, #9
+ 976 008e 6B60     		str	r3, [r5, #4]
+ARM GAS  /tmp/ccbPGhD2.s 			page 25
+
+
+ 225:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.dma_enable              = DISABLE;
+ 977              		.loc 1 225 9 is_stmt 1 view .LVU266
+ 226:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.phy_itface              = USB_OTG_EMBEDDED_PHY;
+ 978              		.loc 1 226 9 view .LVU267
+ 227:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.Sof_enable              = ENABLE;
+ 979              		.loc 1 227 9 view .LVU268
+ 228:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.low_power_enable        = DISABLE;
+ 980              		.loc 1 228 9 view .LVU269
+ 229:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.lpm_enable              = DISABLE;
+ 981              		.loc 1 229 9 view .LVU270
+ 230:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.battery_charging_enable = ENABLE;
+ 982              		.loc 1 230 9 view .LVU271
+ 231:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.vbus_sensing_enable     = DISABLE;
+ 983              		.loc 1 231 9 view .LVU272
+ 232:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.use_dedicated_ep1       = DISABLE;
+ 984              		.loc 1 232 9 view .LVU273
+ 233:usbd_conf.c   ****         hpcd_USB_OTG_HS.Init.use_external_vbus       = DISABLE;
+ 985              		.loc 1 233 9 view .LVU274
+ 234:usbd_conf.c   **** 
+ 986              		.loc 1 234 9 view .LVU275
+ 236:usbd_conf.c   **** 
+ 987              		.loc 1 236 9 view .LVU276
+ 236:usbd_conf.c   **** 
+ 988              		.loc 1 236 12 is_stmt 0 view .LVU277
+ 989 0090 FFF7FEFF 		bl	HAL_PCD_Init
+ 990              	.LVL75:
+ 236:usbd_conf.c   **** 
+ 991              		.loc 1 236 11 view .LVU278
+ 992 0094 0446     		mov	r4, r0
+ 993              	.LVL76:
+ 236:usbd_conf.c   **** 
+ 994              		.loc 1 236 11 view .LVU279
+ 995 0096 00B1     		cbz	r0, .L48
+ 996              	.L49:
+  24:usbd_conf.c   **** 
+ 997              		.loc 1 24 28 is_stmt 1 view .LVU280
+  24:usbd_conf.c   **** 
+ 998              		.loc 1 24 38 view .LVU281
+  24:usbd_conf.c   **** 
+ 999              		.loc 1 24 33 view .LVU282
+  24:usbd_conf.c   **** 
+ 1000              		.loc 1 24 28 view .LVU283
+  24:usbd_conf.c   **** 
+ 1001              		.loc 1 24 38 view .LVU284
+  24:usbd_conf.c   **** 
+ 1002              		.loc 1 24 33 view .LVU285
+ 1003 0098 FEE7     		b	.L49
+ 1004              	.L48:
+ 238:usbd_conf.c   ****         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 0, 0x80);
+ 1005              		.loc 1 238 9 view .LVU286
+ 1006 009a 4FF40071 		mov	r1, #512
+ 1007 009e 2846     		mov	r0, r5
+ 1008 00a0 FFF7FEFF 		bl	HAL_PCDEx_SetRxFiFo
+ 1009              	.LVL77:
+ 239:usbd_conf.c   ****         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 1, 0x174);
+ 1010              		.loc 1 239 9 view .LVU287
+ 1011 00a4 2146     		mov	r1, r4
+ARM GAS  /tmp/ccbPGhD2.s 			page 26
+
+
+ 1012 00a6 8022     		movs	r2, #128
+ 1013 00a8 2846     		mov	r0, r5
+ 1014 00aa FFF7FEFF 		bl	HAL_PCDEx_SetTxFiFo
+ 1015              	.LVL78:
+ 240:usbd_conf.c   ****     }
+ 1016              		.loc 1 240 9 view .LVU288
+ 1017 00ae 4FF4BA72 		mov	r2, #372
+ 1018 00b2 3146     		mov	r1, r6
+ 1019 00b4 2846     		mov	r0, r5
+ 1020 00b6 FFF7FEFF 		bl	HAL_PCDEx_SetTxFiFo
+ 1021              	.LVL79:
+ 1022 00ba A7E7     		b	.L47
+ 1023              	.L54:
+ 1024              		.align	2
+ 1025              	.L53:
+ 1026 00bc 00000000 		.word	.LANCHOR0
+ 1027 00c0 00000840 		.word	1074266112
+ 1028 00c4 00000000 		.word	.LANCHOR1
+ 1029 00c8 00000440 		.word	1074003968
+ 1030              		.cfi_endproc
+ 1031              	.LFE337:
+ 1033              		.section	.text.USBD_LL_DeInit,"ax",%progbits
+ 1034              		.align	1
+ 1035              		.p2align 2,,3
+ 1036              		.global	USBD_LL_DeInit
+ 1037              		.syntax unified
+ 1038              		.thumb
+ 1039              		.thumb_func
+ 1040              		.fpu fpv5-d16
+ 1042              	USBD_LL_DeInit:
+ 1043              	.LVL80:
+ 1044              	.LFB338:
+ 245:usbd_conf.c   **** 
+ 246:usbd_conf.c   **** USBD_StatusTypeDef USBD_LL_DeInit(USBD_HandleTypeDef *pdev)
+ 247:usbd_conf.c   **** {
+ 1045              		.loc 1 247 1 view -0
+ 1046              		.cfi_startproc
+ 1047              		@ args = 0, pretend = 0, frame = 0
+ 1048              		@ frame_needed = 0, uses_anonymous_args = 0
+ 248:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_DeInit(pdev->pData));
+ 1049              		.loc 1 248 5 view .LVU290
+ 1050              		.loc 1 248 12 is_stmt 0 view .LVU291
+ 1051 0000 D0F89802 		ldr	r0, [r0, #664]
+ 1052              	.LVL81:
+ 247:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_DeInit(pdev->pData));
+ 1053              		.loc 1 247 1 view .LVU292
+ 1054 0004 08B5     		push	{r3, lr}
+ 1055              		.cfi_def_cfa_offset 8
+ 1056              		.cfi_offset 3, -8
+ 1057              		.cfi_offset 14, -4
+ 1058              		.loc 1 248 12 view .LVU293
+ 1059 0006 FFF7FEFF 		bl	HAL_PCD_DeInit
+ 1060              	.LVL82:
+ 1061              	.LBB41:
+ 1062              	.LBI41:
+ 249:usbd_conf.c   **** }
+ 250:usbd_conf.c   **** 
+ARM GAS  /tmp/ccbPGhD2.s 			page 27
+
+
+ 251:usbd_conf.c   **** USBD_StatusTypeDef USBD_LL_Start(USBD_HandleTypeDef *pdev)
+ 252:usbd_conf.c   **** {
+ 253:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_Start(pdev->pData));
+ 254:usbd_conf.c   **** }
+ 255:usbd_conf.c   **** 
+ 256:usbd_conf.c   **** USBD_StatusTypeDef USBD_LL_Stop(USBD_HandleTypeDef *pdev)
+ 257:usbd_conf.c   **** {
+ 258:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_Stop(pdev->pData));
+ 259:usbd_conf.c   **** }
+ 260:usbd_conf.c   **** 
+ 261:usbd_conf.c   **** USBD_StatusTypeDef USBD_LL_OpenEP(USBD_HandleTypeDef *pdev,
+ 262:usbd_conf.c   ****                                    uint8_t ep_addr, uint8_t ep_type, uint16_t ep_mps)
+ 263:usbd_conf.c   **** {
+ 264:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Open(pdev->pData, ep_addr, ep_mps, ep_type));
+ 265:usbd_conf.c   **** }
+ 266:usbd_conf.c   **** 
+ 267:usbd_conf.c   **** USBD_StatusTypeDef USBD_LL_CloseEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr)
+ 268:usbd_conf.c   **** {
+ 269:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Close(pdev->pData, ep_addr));
+ 270:usbd_conf.c   **** }
+ 271:usbd_conf.c   **** 
+ 272:usbd_conf.c   **** USBD_StatusTypeDef USBD_LL_FlushEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr)
+ 273:usbd_conf.c   **** {
+ 274:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Flush(pdev->pData, ep_addr));
+ 275:usbd_conf.c   **** }
+ 276:usbd_conf.c   **** 
+ 277:usbd_conf.c   **** USBD_StatusTypeDef USBD_LL_StallEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr)
+ 278:usbd_conf.c   **** {
+ 279:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_SetStall(pdev->pData, ep_addr));
+ 280:usbd_conf.c   **** }
+ 281:usbd_conf.c   **** 
+ 282:usbd_conf.c   **** USBD_StatusTypeDef USBD_LL_ClearStallEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr)
+ 283:usbd_conf.c   **** {
+ 284:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_ClrStall(pdev->pData, ep_addr));
+ 285:usbd_conf.c   **** }
+ 286:usbd_conf.c   **** 
+ 287:usbd_conf.c   **** uint8_t USBD_LL_IsStallEP(USBD_HandleTypeDef *pdev, uint8_t ep_addr)
+ 288:usbd_conf.c   **** {
+ 289:usbd_conf.c   ****     PCD_HandleTypeDef *hpcd = (PCD_HandleTypeDef *)pdev->pData;
+ 290:usbd_conf.c   ****     if((ep_addr & 0x80) == 0x80)
+ 291:usbd_conf.c   ****         return hpcd->IN_ep[ep_addr & 0x7F].is_stall;
+ 292:usbd_conf.c   ****     else
+ 293:usbd_conf.c   ****         return hpcd->OUT_ep[ep_addr & 0x7F].is_stall;
+ 294:usbd_conf.c   **** }
+ 295:usbd_conf.c   **** 
+ 296:usbd_conf.c   **** USBD_StatusTypeDef USBD_LL_SetUSBAddress(USBD_HandleTypeDef *pdev, uint8_t dev_addr)
+ 297:usbd_conf.c   **** {
+ 298:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_SetAddress(pdev->pData, dev_addr));
+ 299:usbd_conf.c   **** }
+ 300:usbd_conf.c   **** 
+ 301:usbd_conf.c   **** USBD_StatusTypeDef USBD_LL_Transmit(USBD_HandleTypeDef *pdev,
+ 302:usbd_conf.c   ****                                      uint8_t ep_addr, uint8_t *pbuf, uint16_t size)
+ 303:usbd_conf.c   **** {
+ 304:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Transmit(pdev->pData, ep_addr, pbuf, size));
+ 305:usbd_conf.c   **** }
+ 306:usbd_conf.c   **** 
+ 307:usbd_conf.c   **** USBD_StatusTypeDef USBD_LL_PrepareReceive(USBD_HandleTypeDef *pdev,
+ARM GAS  /tmp/ccbPGhD2.s 			page 28
+
+
+ 308:usbd_conf.c   ****                                            uint8_t ep_addr, uint8_t *pbuf, uint16_t size)
+ 309:usbd_conf.c   **** {
+ 310:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Receive(pdev->pData, ep_addr, pbuf, size));
+ 311:usbd_conf.c   **** }
+ 312:usbd_conf.c   **** 
+ 313:usbd_conf.c   **** uint32_t USBD_LL_GetRxDataSize(USBD_HandleTypeDef *pdev, uint8_t ep_addr)
+ 314:usbd_conf.c   **** {
+ 315:usbd_conf.c   ****     return HAL_PCD_EP_GetRxCount((PCD_HandleTypeDef *)pdev->pData, ep_addr);
+ 316:usbd_conf.c   **** }
+ 317:usbd_conf.c   **** 
+ 318:usbd_conf.c   **** void USBD_LL_Delay(uint32_t Delay)
+ 319:usbd_conf.c   **** {
+ 320:usbd_conf.c   ****     HAL_Delay(Delay);
+ 321:usbd_conf.c   **** }
+ 322:usbd_conf.c   **** 
+ 323:usbd_conf.c   **** USBD_StatusTypeDef USBD_Get_USB_Status(HAL_StatusTypeDef hal_status)
+ 1063              		.loc 1 323 20 is_stmt 1 view .LVU294
+ 1064              	.LBE41:
+ 324:usbd_conf.c   **** {
+ 325:usbd_conf.c   ****     switch(hal_status)
+ 1065              		.loc 1 325 5 view .LVU295
+ 1066 000a 0328     		cmp	r0, #3
+ 1067 000c 02D8     		bhi	.L57
+ 1068 000e 024B     		ldr	r3, .L59
+ 1069 0010 185C     		ldrb	r0, [r3, r0]	@ zero_extendqisi2
+ 1070              	.LVL83:
+ 249:usbd_conf.c   **** }
+ 1071              		.loc 1 249 1 is_stmt 0 view .LVU296
+ 1072 0012 08BD     		pop	{r3, pc}
+ 1073              	.LVL84:
+ 1074              	.L57:
+ 248:usbd_conf.c   **** }
+ 1075              		.loc 1 248 12 view .LVU297
+ 1076 0014 0220     		movs	r0, #2
+ 1077              	.LVL85:
+ 249:usbd_conf.c   **** }
+ 1078              		.loc 1 249 1 view .LVU298
+ 1079 0016 08BD     		pop	{r3, pc}
+ 1080              	.L60:
+ 1081              		.align	2
+ 1082              	.L59:
+ 1083 0018 00000000 		.word	.LANCHOR2
+ 1084              		.cfi_endproc
+ 1085              	.LFE338:
+ 1087              		.section	.text.USBD_LL_Start,"ax",%progbits
+ 1088              		.align	1
+ 1089              		.p2align 2,,3
+ 1090              		.global	USBD_LL_Start
+ 1091              		.syntax unified
+ 1092              		.thumb
+ 1093              		.thumb_func
+ 1094              		.fpu fpv5-d16
+ 1096              	USBD_LL_Start:
+ 1097              	.LVL86:
+ 1098              	.LFB339:
+ 252:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_Start(pdev->pData));
+ 1099              		.loc 1 252 1 is_stmt 1 view -0
+ARM GAS  /tmp/ccbPGhD2.s 			page 29
+
+
+ 1100              		.cfi_startproc
+ 1101              		@ args = 0, pretend = 0, frame = 0
+ 1102              		@ frame_needed = 0, uses_anonymous_args = 0
+ 253:usbd_conf.c   **** }
+ 1103              		.loc 1 253 5 view .LVU300
+ 253:usbd_conf.c   **** }
+ 1104              		.loc 1 253 12 is_stmt 0 view .LVU301
+ 1105 0000 D0F89802 		ldr	r0, [r0, #664]
+ 1106              	.LVL87:
+ 252:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_Start(pdev->pData));
+ 1107              		.loc 1 252 1 view .LVU302
+ 1108 0004 08B5     		push	{r3, lr}
+ 1109              		.cfi_def_cfa_offset 8
+ 1110              		.cfi_offset 3, -8
+ 1111              		.cfi_offset 14, -4
+ 253:usbd_conf.c   **** }
+ 1112              		.loc 1 253 12 view .LVU303
+ 1113 0006 FFF7FEFF 		bl	HAL_PCD_Start
+ 1114              	.LVL88:
+ 1115              	.LBB42:
+ 1116              	.LBI42:
+ 323:usbd_conf.c   **** {
+ 1117              		.loc 1 323 20 is_stmt 1 view .LVU304
+ 1118              	.LBE42:
+ 1119              		.loc 1 325 5 view .LVU305
+ 1120 000a 0328     		cmp	r0, #3
+ 1121 000c 02D8     		bhi	.L63
+ 1122 000e 024B     		ldr	r3, .L65
+ 1123 0010 185C     		ldrb	r0, [r3, r0]	@ zero_extendqisi2
+ 1124              	.LVL89:
+ 254:usbd_conf.c   **** 
+ 1125              		.loc 1 254 1 is_stmt 0 view .LVU306
+ 1126 0012 08BD     		pop	{r3, pc}
+ 1127              	.LVL90:
+ 1128              	.L63:
+ 253:usbd_conf.c   **** }
+ 1129              		.loc 1 253 12 view .LVU307
+ 1130 0014 0220     		movs	r0, #2
+ 1131              	.LVL91:
+ 254:usbd_conf.c   **** 
+ 1132              		.loc 1 254 1 view .LVU308
+ 1133 0016 08BD     		pop	{r3, pc}
+ 1134              	.L66:
+ 1135              		.align	2
+ 1136              	.L65:
+ 1137 0018 00000000 		.word	.LANCHOR2
+ 1138              		.cfi_endproc
+ 1139              	.LFE339:
+ 1141              		.section	.text.USBD_LL_Stop,"ax",%progbits
+ 1142              		.align	1
+ 1143              		.p2align 2,,3
+ 1144              		.global	USBD_LL_Stop
+ 1145              		.syntax unified
+ 1146              		.thumb
+ 1147              		.thumb_func
+ 1148              		.fpu fpv5-d16
+ 1150              	USBD_LL_Stop:
+ARM GAS  /tmp/ccbPGhD2.s 			page 30
+
+
+ 1151              	.LVL92:
+ 1152              	.LFB340:
+ 257:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_Stop(pdev->pData));
+ 1153              		.loc 1 257 1 is_stmt 1 view -0
+ 1154              		.cfi_startproc
+ 1155              		@ args = 0, pretend = 0, frame = 0
+ 1156              		@ frame_needed = 0, uses_anonymous_args = 0
+ 258:usbd_conf.c   **** }
+ 1157              		.loc 1 258 5 view .LVU310
+ 258:usbd_conf.c   **** }
+ 1158              		.loc 1 258 12 is_stmt 0 view .LVU311
+ 1159 0000 D0F89802 		ldr	r0, [r0, #664]
+ 1160              	.LVL93:
+ 257:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_Stop(pdev->pData));
+ 1161              		.loc 1 257 1 view .LVU312
+ 1162 0004 08B5     		push	{r3, lr}
+ 1163              		.cfi_def_cfa_offset 8
+ 1164              		.cfi_offset 3, -8
+ 1165              		.cfi_offset 14, -4
+ 258:usbd_conf.c   **** }
+ 1166              		.loc 1 258 12 view .LVU313
+ 1167 0006 FFF7FEFF 		bl	HAL_PCD_Stop
+ 1168              	.LVL94:
+ 1169              	.LBB43:
+ 1170              	.LBI43:
+ 323:usbd_conf.c   **** {
+ 1171              		.loc 1 323 20 is_stmt 1 view .LVU314
+ 1172              	.LBE43:
+ 1173              		.loc 1 325 5 view .LVU315
+ 1174 000a 0328     		cmp	r0, #3
+ 1175 000c 02D8     		bhi	.L69
+ 1176 000e 024B     		ldr	r3, .L71
+ 1177 0010 185C     		ldrb	r0, [r3, r0]	@ zero_extendqisi2
+ 1178              	.LVL95:
+ 259:usbd_conf.c   **** 
+ 1179              		.loc 1 259 1 is_stmt 0 view .LVU316
+ 1180 0012 08BD     		pop	{r3, pc}
+ 1181              	.LVL96:
+ 1182              	.L69:
+ 258:usbd_conf.c   **** }
+ 1183              		.loc 1 258 12 view .LVU317
+ 1184 0014 0220     		movs	r0, #2
+ 1185              	.LVL97:
+ 259:usbd_conf.c   **** 
+ 1186              		.loc 1 259 1 view .LVU318
+ 1187 0016 08BD     		pop	{r3, pc}
+ 1188              	.L72:
+ 1189              		.align	2
+ 1190              	.L71:
+ 1191 0018 00000000 		.word	.LANCHOR2
+ 1192              		.cfi_endproc
+ 1193              	.LFE340:
+ 1195              		.section	.text.USBD_LL_OpenEP,"ax",%progbits
+ 1196              		.align	1
+ 1197              		.p2align 2,,3
+ 1198              		.global	USBD_LL_OpenEP
+ 1199              		.syntax unified
+ARM GAS  /tmp/ccbPGhD2.s 			page 31
+
+
+ 1200              		.thumb
+ 1201              		.thumb_func
+ 1202              		.fpu fpv5-d16
+ 1204              	USBD_LL_OpenEP:
+ 1205              	.LVL98:
+ 1206              	.LFB341:
+ 263:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Open(pdev->pData, ep_addr, ep_mps, ep_type));
+ 1207              		.loc 1 263 1 is_stmt 1 view -0
+ 1208              		.cfi_startproc
+ 1209              		@ args = 0, pretend = 0, frame = 0
+ 1210              		@ frame_needed = 0, uses_anonymous_args = 0
+ 264:usbd_conf.c   **** }
+ 1211              		.loc 1 264 5 view .LVU320
+ 263:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Open(pdev->pData, ep_addr, ep_mps, ep_type));
+ 1212              		.loc 1 263 1 is_stmt 0 view .LVU321
+ 1213 0000 9446     		mov	ip, r2
+ 264:usbd_conf.c   **** }
+ 1214              		.loc 1 264 12 view .LVU322
+ 1215 0002 D0F89802 		ldr	r0, [r0, #664]
+ 1216              	.LVL99:
+ 263:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Open(pdev->pData, ep_addr, ep_mps, ep_type));
+ 1217              		.loc 1 263 1 view .LVU323
+ 1218 0006 1A46     		mov	r2, r3
+ 1219              	.LVL100:
+ 263:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Open(pdev->pData, ep_addr, ep_mps, ep_type));
+ 1220              		.loc 1 263 1 view .LVU324
+ 1221 0008 08B5     		push	{r3, lr}
+ 1222              		.cfi_def_cfa_offset 8
+ 1223              		.cfi_offset 3, -8
+ 1224              		.cfi_offset 14, -4
+ 264:usbd_conf.c   **** }
+ 1225              		.loc 1 264 12 view .LVU325
+ 1226 000a 6346     		mov	r3, ip
+ 1227              	.LVL101:
+ 264:usbd_conf.c   **** }
+ 1228              		.loc 1 264 12 view .LVU326
+ 1229 000c FFF7FEFF 		bl	HAL_PCD_EP_Open
+ 1230              	.LVL102:
+ 1231              	.LBB44:
+ 1232              	.LBI44:
+ 323:usbd_conf.c   **** {
+ 1233              		.loc 1 323 20 is_stmt 1 view .LVU327
+ 1234              	.LBE44:
+ 1235              		.loc 1 325 5 view .LVU328
+ 1236 0010 0328     		cmp	r0, #3
+ 1237 0012 02D8     		bhi	.L75
+ 1238 0014 024B     		ldr	r3, .L77
+ 1239 0016 185C     		ldrb	r0, [r3, r0]	@ zero_extendqisi2
+ 1240              	.LVL103:
+ 265:usbd_conf.c   **** 
+ 1241              		.loc 1 265 1 is_stmt 0 view .LVU329
+ 1242 0018 08BD     		pop	{r3, pc}
+ 1243              	.LVL104:
+ 1244              	.L75:
+ 264:usbd_conf.c   **** }
+ 1245              		.loc 1 264 12 view .LVU330
+ 1246 001a 0220     		movs	r0, #2
+ARM GAS  /tmp/ccbPGhD2.s 			page 32
+
+
+ 1247              	.LVL105:
+ 265:usbd_conf.c   **** 
+ 1248              		.loc 1 265 1 view .LVU331
+ 1249 001c 08BD     		pop	{r3, pc}
+ 1250              	.L78:
+ 1251 001e 00BF     		.align	2
+ 1252              	.L77:
+ 1253 0020 00000000 		.word	.LANCHOR2
+ 1254              		.cfi_endproc
+ 1255              	.LFE341:
+ 1257              		.section	.text.USBD_LL_CloseEP,"ax",%progbits
+ 1258              		.align	1
+ 1259              		.p2align 2,,3
+ 1260              		.global	USBD_LL_CloseEP
+ 1261              		.syntax unified
+ 1262              		.thumb
+ 1263              		.thumb_func
+ 1264              		.fpu fpv5-d16
+ 1266              	USBD_LL_CloseEP:
+ 1267              	.LVL106:
+ 1268              	.LFB342:
+ 268:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Close(pdev->pData, ep_addr));
+ 1269              		.loc 1 268 1 is_stmt 1 view -0
+ 1270              		.cfi_startproc
+ 1271              		@ args = 0, pretend = 0, frame = 0
+ 1272              		@ frame_needed = 0, uses_anonymous_args = 0
+ 269:usbd_conf.c   **** }
+ 1273              		.loc 1 269 5 view .LVU333
+ 269:usbd_conf.c   **** }
+ 1274              		.loc 1 269 12 is_stmt 0 view .LVU334
+ 1275 0000 D0F89802 		ldr	r0, [r0, #664]
+ 1276              	.LVL107:
+ 268:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Close(pdev->pData, ep_addr));
+ 1277              		.loc 1 268 1 view .LVU335
+ 1278 0004 08B5     		push	{r3, lr}
+ 1279              		.cfi_def_cfa_offset 8
+ 1280              		.cfi_offset 3, -8
+ 1281              		.cfi_offset 14, -4
+ 269:usbd_conf.c   **** }
+ 1282              		.loc 1 269 12 view .LVU336
+ 1283 0006 FFF7FEFF 		bl	HAL_PCD_EP_Close
+ 1284              	.LVL108:
+ 1285              	.LBB45:
+ 1286              	.LBI45:
+ 323:usbd_conf.c   **** {
+ 1287              		.loc 1 323 20 is_stmt 1 view .LVU337
+ 1288              	.LBE45:
+ 1289              		.loc 1 325 5 view .LVU338
+ 1290 000a 0328     		cmp	r0, #3
+ 1291 000c 02D8     		bhi	.L81
+ 1292 000e 024B     		ldr	r3, .L83
+ 1293 0010 185C     		ldrb	r0, [r3, r0]	@ zero_extendqisi2
+ 1294              	.LVL109:
+ 270:usbd_conf.c   **** 
+ 1295              		.loc 1 270 1 is_stmt 0 view .LVU339
+ 1296 0012 08BD     		pop	{r3, pc}
+ 1297              	.LVL110:
+ARM GAS  /tmp/ccbPGhD2.s 			page 33
+
+
+ 1298              	.L81:
+ 269:usbd_conf.c   **** }
+ 1299              		.loc 1 269 12 view .LVU340
+ 1300 0014 0220     		movs	r0, #2
+ 1301              	.LVL111:
+ 270:usbd_conf.c   **** 
+ 1302              		.loc 1 270 1 view .LVU341
+ 1303 0016 08BD     		pop	{r3, pc}
+ 1304              	.L84:
+ 1305              		.align	2
+ 1306              	.L83:
+ 1307 0018 00000000 		.word	.LANCHOR2
+ 1308              		.cfi_endproc
+ 1309              	.LFE342:
+ 1311              		.section	.text.USBD_LL_FlushEP,"ax",%progbits
+ 1312              		.align	1
+ 1313              		.p2align 2,,3
+ 1314              		.global	USBD_LL_FlushEP
+ 1315              		.syntax unified
+ 1316              		.thumb
+ 1317              		.thumb_func
+ 1318              		.fpu fpv5-d16
+ 1320              	USBD_LL_FlushEP:
+ 1321              	.LVL112:
+ 1322              	.LFB343:
+ 273:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Flush(pdev->pData, ep_addr));
+ 1323              		.loc 1 273 1 is_stmt 1 view -0
+ 1324              		.cfi_startproc
+ 1325              		@ args = 0, pretend = 0, frame = 0
+ 1326              		@ frame_needed = 0, uses_anonymous_args = 0
+ 274:usbd_conf.c   **** }
+ 1327              		.loc 1 274 5 view .LVU343
+ 274:usbd_conf.c   **** }
+ 1328              		.loc 1 274 12 is_stmt 0 view .LVU344
+ 1329 0000 D0F89802 		ldr	r0, [r0, #664]
+ 1330              	.LVL113:
+ 273:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Flush(pdev->pData, ep_addr));
+ 1331              		.loc 1 273 1 view .LVU345
+ 1332 0004 08B5     		push	{r3, lr}
+ 1333              		.cfi_def_cfa_offset 8
+ 1334              		.cfi_offset 3, -8
+ 1335              		.cfi_offset 14, -4
+ 274:usbd_conf.c   **** }
+ 1336              		.loc 1 274 12 view .LVU346
+ 1337 0006 FFF7FEFF 		bl	HAL_PCD_EP_Flush
+ 1338              	.LVL114:
+ 1339              	.LBB46:
+ 1340              	.LBI46:
+ 323:usbd_conf.c   **** {
+ 1341              		.loc 1 323 20 is_stmt 1 view .LVU347
+ 1342              	.LBE46:
+ 1343              		.loc 1 325 5 view .LVU348
+ 1344 000a 0328     		cmp	r0, #3
+ 1345 000c 02D8     		bhi	.L87
+ 1346 000e 024B     		ldr	r3, .L89
+ 1347 0010 185C     		ldrb	r0, [r3, r0]	@ zero_extendqisi2
+ 1348              	.LVL115:
+ARM GAS  /tmp/ccbPGhD2.s 			page 34
+
+
+ 275:usbd_conf.c   **** 
+ 1349              		.loc 1 275 1 is_stmt 0 view .LVU349
+ 1350 0012 08BD     		pop	{r3, pc}
+ 1351              	.LVL116:
+ 1352              	.L87:
+ 274:usbd_conf.c   **** }
+ 1353              		.loc 1 274 12 view .LVU350
+ 1354 0014 0220     		movs	r0, #2
+ 1355              	.LVL117:
+ 275:usbd_conf.c   **** 
+ 1356              		.loc 1 275 1 view .LVU351
+ 1357 0016 08BD     		pop	{r3, pc}
+ 1358              	.L90:
+ 1359              		.align	2
+ 1360              	.L89:
+ 1361 0018 00000000 		.word	.LANCHOR2
+ 1362              		.cfi_endproc
+ 1363              	.LFE343:
+ 1365              		.section	.text.USBD_LL_StallEP,"ax",%progbits
+ 1366              		.align	1
+ 1367              		.p2align 2,,3
+ 1368              		.global	USBD_LL_StallEP
+ 1369              		.syntax unified
+ 1370              		.thumb
+ 1371              		.thumb_func
+ 1372              		.fpu fpv5-d16
+ 1374              	USBD_LL_StallEP:
+ 1375              	.LVL118:
+ 1376              	.LFB344:
+ 278:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_SetStall(pdev->pData, ep_addr));
+ 1377              		.loc 1 278 1 is_stmt 1 view -0
+ 1378              		.cfi_startproc
+ 1379              		@ args = 0, pretend = 0, frame = 0
+ 1380              		@ frame_needed = 0, uses_anonymous_args = 0
+ 279:usbd_conf.c   **** }
+ 1381              		.loc 1 279 5 view .LVU353
+ 279:usbd_conf.c   **** }
+ 1382              		.loc 1 279 12 is_stmt 0 view .LVU354
+ 1383 0000 D0F89802 		ldr	r0, [r0, #664]
+ 1384              	.LVL119:
+ 278:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_SetStall(pdev->pData, ep_addr));
+ 1385              		.loc 1 278 1 view .LVU355
+ 1386 0004 08B5     		push	{r3, lr}
+ 1387              		.cfi_def_cfa_offset 8
+ 1388              		.cfi_offset 3, -8
+ 1389              		.cfi_offset 14, -4
+ 279:usbd_conf.c   **** }
+ 1390              		.loc 1 279 12 view .LVU356
+ 1391 0006 FFF7FEFF 		bl	HAL_PCD_EP_SetStall
+ 1392              	.LVL120:
+ 1393              	.LBB47:
+ 1394              	.LBI47:
+ 323:usbd_conf.c   **** {
+ 1395              		.loc 1 323 20 is_stmt 1 view .LVU357
+ 1396              	.LBE47:
+ 1397              		.loc 1 325 5 view .LVU358
+ 1398 000a 0328     		cmp	r0, #3
+ARM GAS  /tmp/ccbPGhD2.s 			page 35
+
+
+ 1399 000c 02D8     		bhi	.L93
+ 1400 000e 024B     		ldr	r3, .L95
+ 1401 0010 185C     		ldrb	r0, [r3, r0]	@ zero_extendqisi2
+ 1402              	.LVL121:
+ 280:usbd_conf.c   **** 
+ 1403              		.loc 1 280 1 is_stmt 0 view .LVU359
+ 1404 0012 08BD     		pop	{r3, pc}
+ 1405              	.LVL122:
+ 1406              	.L93:
+ 279:usbd_conf.c   **** }
+ 1407              		.loc 1 279 12 view .LVU360
+ 1408 0014 0220     		movs	r0, #2
+ 1409              	.LVL123:
+ 280:usbd_conf.c   **** 
+ 1410              		.loc 1 280 1 view .LVU361
+ 1411 0016 08BD     		pop	{r3, pc}
+ 1412              	.L96:
+ 1413              		.align	2
+ 1414              	.L95:
+ 1415 0018 00000000 		.word	.LANCHOR2
+ 1416              		.cfi_endproc
+ 1417              	.LFE344:
+ 1419              		.section	.text.USBD_LL_ClearStallEP,"ax",%progbits
+ 1420              		.align	1
+ 1421              		.p2align 2,,3
+ 1422              		.global	USBD_LL_ClearStallEP
+ 1423              		.syntax unified
+ 1424              		.thumb
+ 1425              		.thumb_func
+ 1426              		.fpu fpv5-d16
+ 1428              	USBD_LL_ClearStallEP:
+ 1429              	.LVL124:
+ 1430              	.LFB345:
+ 283:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_ClrStall(pdev->pData, ep_addr));
+ 1431              		.loc 1 283 1 is_stmt 1 view -0
+ 1432              		.cfi_startproc
+ 1433              		@ args = 0, pretend = 0, frame = 0
+ 1434              		@ frame_needed = 0, uses_anonymous_args = 0
+ 284:usbd_conf.c   **** }
+ 1435              		.loc 1 284 5 view .LVU363
+ 284:usbd_conf.c   **** }
+ 1436              		.loc 1 284 12 is_stmt 0 view .LVU364
+ 1437 0000 D0F89802 		ldr	r0, [r0, #664]
+ 1438              	.LVL125:
+ 283:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_ClrStall(pdev->pData, ep_addr));
+ 1439              		.loc 1 283 1 view .LVU365
+ 1440 0004 08B5     		push	{r3, lr}
+ 1441              		.cfi_def_cfa_offset 8
+ 1442              		.cfi_offset 3, -8
+ 1443              		.cfi_offset 14, -4
+ 284:usbd_conf.c   **** }
+ 1444              		.loc 1 284 12 view .LVU366
+ 1445 0006 FFF7FEFF 		bl	HAL_PCD_EP_ClrStall
+ 1446              	.LVL126:
+ 1447              	.LBB48:
+ 1448              	.LBI48:
+ 323:usbd_conf.c   **** {
+ARM GAS  /tmp/ccbPGhD2.s 			page 36
+
+
+ 1449              		.loc 1 323 20 is_stmt 1 view .LVU367
+ 1450              	.LBE48:
+ 1451              		.loc 1 325 5 view .LVU368
+ 1452 000a 0328     		cmp	r0, #3
+ 1453 000c 02D8     		bhi	.L99
+ 1454 000e 024B     		ldr	r3, .L101
+ 1455 0010 185C     		ldrb	r0, [r3, r0]	@ zero_extendqisi2
+ 1456              	.LVL127:
+ 285:usbd_conf.c   **** 
+ 1457              		.loc 1 285 1 is_stmt 0 view .LVU369
+ 1458 0012 08BD     		pop	{r3, pc}
+ 1459              	.LVL128:
+ 1460              	.L99:
+ 284:usbd_conf.c   **** }
+ 1461              		.loc 1 284 12 view .LVU370
+ 1462 0014 0220     		movs	r0, #2
+ 1463              	.LVL129:
+ 285:usbd_conf.c   **** 
+ 1464              		.loc 1 285 1 view .LVU371
+ 1465 0016 08BD     		pop	{r3, pc}
+ 1466              	.L102:
+ 1467              		.align	2
+ 1468              	.L101:
+ 1469 0018 00000000 		.word	.LANCHOR2
+ 1470              		.cfi_endproc
+ 1471              	.LFE345:
+ 1473              		.section	.text.USBD_LL_IsStallEP,"ax",%progbits
+ 1474              		.align	1
+ 1475              		.p2align 2,,3
+ 1476              		.global	USBD_LL_IsStallEP
+ 1477              		.syntax unified
+ 1478              		.thumb
+ 1479              		.thumb_func
+ 1480              		.fpu fpv5-d16
+ 1482              	USBD_LL_IsStallEP:
+ 1483              	.LVL130:
+ 1484              	.LFB346:
+ 288:usbd_conf.c   ****     PCD_HandleTypeDef *hpcd = (PCD_HandleTypeDef *)pdev->pData;
+ 1485              		.loc 1 288 1 is_stmt 1 view -0
+ 1486              		.cfi_startproc
+ 1487              		@ args = 0, pretend = 0, frame = 0
+ 1488              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1489              		@ link register save eliminated.
+ 289:usbd_conf.c   ****     if((ep_addr & 0x80) == 0x80)
+ 1490              		.loc 1 289 5 view .LVU373
+ 290:usbd_conf.c   ****         return hpcd->IN_ep[ep_addr & 0x7F].is_stall;
+ 1491              		.loc 1 290 7 is_stmt 0 view .LVU374
+ 1492 0000 0A06     		lsls	r2, r1, #24
+ 289:usbd_conf.c   ****     if((ep_addr & 0x80) == 0x80)
+ 1493              		.loc 1 289 24 view .LVU375
+ 1494 0002 D0F89832 		ldr	r3, [r0, #664]
+ 1495              	.LVL131:
+ 290:usbd_conf.c   ****         return hpcd->IN_ep[ep_addr & 0x7F].is_stall;
+ 1496              		.loc 1 290 5 is_stmt 1 view .LVU376
+ 290:usbd_conf.c   ****         return hpcd->IN_ep[ep_addr & 0x7F].is_stall;
+ 1497              		.loc 1 290 7 is_stmt 0 view .LVU377
+ 1498 0006 06D4     		bmi	.L106
+ARM GAS  /tmp/ccbPGhD2.s 			page 37
+
+
+ 293:usbd_conf.c   **** }
+ 1499              		.loc 1 293 9 is_stmt 1 view .LVU378
+ 293:usbd_conf.c   **** }
+ 1500              		.loc 1 293 44 is_stmt 0 view .LVU379
+ 1501 0008 C1EBC101 		rsb	r1, r1, r1, lsl #3
+ 1502              	.LVL132:
+ 293:usbd_conf.c   **** }
+ 1503              		.loc 1 293 44 view .LVU380
+ 1504 000c 03EB8101 		add	r1, r3, r1, lsl #2
+ 1505 0010 91F8FE01 		ldrb	r0, [r1, #510]	@ zero_extendqisi2
+ 1506              	.LVL133:
+ 294:usbd_conf.c   **** 
+ 1507              		.loc 1 294 1 view .LVU381
+ 1508 0014 7047     		bx	lr
+ 1509              	.LVL134:
+ 1510              	.L106:
+ 291:usbd_conf.c   ****     else
+ 1511              		.loc 1 291 9 is_stmt 1 view .LVU382
+ 291:usbd_conf.c   ****     else
+ 1512              		.loc 1 291 36 is_stmt 0 view .LVU383
+ 1513 0016 01F07F01 		and	r1, r1, #127
+ 1514              	.LVL135:
+ 291:usbd_conf.c   ****     else
+ 1515              		.loc 1 291 43 view .LVU384
+ 1516 001a C1EBC101 		rsb	r1, r1, r1, lsl #3
+ 1517 001e 03EB8101 		add	r1, r3, r1, lsl #2
+ 1518 0022 91F83E00 		ldrb	r0, [r1, #62]	@ zero_extendqisi2
+ 1519              	.LVL136:
+ 291:usbd_conf.c   ****     else
+ 1520              		.loc 1 291 43 view .LVU385
+ 1521 0026 7047     		bx	lr
+ 1522              		.cfi_endproc
+ 1523              	.LFE346:
+ 1525              		.section	.text.USBD_LL_SetUSBAddress,"ax",%progbits
+ 1526              		.align	1
+ 1527              		.p2align 2,,3
+ 1528              		.global	USBD_LL_SetUSBAddress
+ 1529              		.syntax unified
+ 1530              		.thumb
+ 1531              		.thumb_func
+ 1532              		.fpu fpv5-d16
+ 1534              	USBD_LL_SetUSBAddress:
+ 1535              	.LVL137:
+ 1536              	.LFB347:
+ 297:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_SetAddress(pdev->pData, dev_addr));
+ 1537              		.loc 1 297 1 is_stmt 1 view -0
+ 1538              		.cfi_startproc
+ 1539              		@ args = 0, pretend = 0, frame = 0
+ 1540              		@ frame_needed = 0, uses_anonymous_args = 0
+ 298:usbd_conf.c   **** }
+ 1541              		.loc 1 298 5 view .LVU387
+ 298:usbd_conf.c   **** }
+ 1542              		.loc 1 298 12 is_stmt 0 view .LVU388
+ 1543 0000 D0F89802 		ldr	r0, [r0, #664]
+ 1544              	.LVL138:
+ 297:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_SetAddress(pdev->pData, dev_addr));
+ 1545              		.loc 1 297 1 view .LVU389
+ARM GAS  /tmp/ccbPGhD2.s 			page 38
+
+
+ 1546 0004 08B5     		push	{r3, lr}
+ 1547              		.cfi_def_cfa_offset 8
+ 1548              		.cfi_offset 3, -8
+ 1549              		.cfi_offset 14, -4
+ 298:usbd_conf.c   **** }
+ 1550              		.loc 1 298 12 view .LVU390
+ 1551 0006 FFF7FEFF 		bl	HAL_PCD_SetAddress
+ 1552              	.LVL139:
+ 1553              	.LBB49:
+ 1554              	.LBI49:
+ 323:usbd_conf.c   **** {
+ 1555              		.loc 1 323 20 is_stmt 1 view .LVU391
+ 1556              	.LBE49:
+ 1557              		.loc 1 325 5 view .LVU392
+ 1558 000a 0328     		cmp	r0, #3
+ 1559 000c 02D8     		bhi	.L109
+ 1560 000e 024B     		ldr	r3, .L111
+ 1561 0010 185C     		ldrb	r0, [r3, r0]	@ zero_extendqisi2
+ 1562              	.LVL140:
+ 299:usbd_conf.c   **** 
+ 1563              		.loc 1 299 1 is_stmt 0 view .LVU393
+ 1564 0012 08BD     		pop	{r3, pc}
+ 1565              	.LVL141:
+ 1566              	.L109:
+ 298:usbd_conf.c   **** }
+ 1567              		.loc 1 298 12 view .LVU394
+ 1568 0014 0220     		movs	r0, #2
+ 1569              	.LVL142:
+ 299:usbd_conf.c   **** 
+ 1570              		.loc 1 299 1 view .LVU395
+ 1571 0016 08BD     		pop	{r3, pc}
+ 1572              	.L112:
+ 1573              		.align	2
+ 1574              	.L111:
+ 1575 0018 00000000 		.word	.LANCHOR2
+ 1576              		.cfi_endproc
+ 1577              	.LFE347:
+ 1579              		.section	.text.USBD_LL_Transmit,"ax",%progbits
+ 1580              		.align	1
+ 1581              		.p2align 2,,3
+ 1582              		.global	USBD_LL_Transmit
+ 1583              		.syntax unified
+ 1584              		.thumb
+ 1585              		.thumb_func
+ 1586              		.fpu fpv5-d16
+ 1588              	USBD_LL_Transmit:
+ 1589              	.LVL143:
+ 1590              	.LFB348:
+ 303:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Transmit(pdev->pData, ep_addr, pbuf, size));
+ 1591              		.loc 1 303 1 is_stmt 1 view -0
+ 1592              		.cfi_startproc
+ 1593              		@ args = 0, pretend = 0, frame = 0
+ 1594              		@ frame_needed = 0, uses_anonymous_args = 0
+ 304:usbd_conf.c   **** }
+ 1595              		.loc 1 304 5 view .LVU397
+ 304:usbd_conf.c   **** }
+ 1596              		.loc 1 304 12 is_stmt 0 view .LVU398
+ARM GAS  /tmp/ccbPGhD2.s 			page 39
+
+
+ 1597 0000 D0F89802 		ldr	r0, [r0, #664]
+ 1598              	.LVL144:
+ 303:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Transmit(pdev->pData, ep_addr, pbuf, size));
+ 1599              		.loc 1 303 1 view .LVU399
+ 1600 0004 08B5     		push	{r3, lr}
+ 1601              		.cfi_def_cfa_offset 8
+ 1602              		.cfi_offset 3, -8
+ 1603              		.cfi_offset 14, -4
+ 304:usbd_conf.c   **** }
+ 1604              		.loc 1 304 12 view .LVU400
+ 1605 0006 FFF7FEFF 		bl	HAL_PCD_EP_Transmit
+ 1606              	.LVL145:
+ 1607              	.LBB50:
+ 1608              	.LBI50:
+ 323:usbd_conf.c   **** {
+ 1609              		.loc 1 323 20 is_stmt 1 view .LVU401
+ 1610              	.LBE50:
+ 1611              		.loc 1 325 5 view .LVU402
+ 1612 000a 0328     		cmp	r0, #3
+ 1613 000c 02D8     		bhi	.L115
+ 1614 000e 024B     		ldr	r3, .L117
+ 1615 0010 185C     		ldrb	r0, [r3, r0]	@ zero_extendqisi2
+ 1616              	.LVL146:
+ 305:usbd_conf.c   **** 
+ 1617              		.loc 1 305 1 is_stmt 0 view .LVU403
+ 1618 0012 08BD     		pop	{r3, pc}
+ 1619              	.LVL147:
+ 1620              	.L115:
+ 304:usbd_conf.c   **** }
+ 1621              		.loc 1 304 12 view .LVU404
+ 1622 0014 0220     		movs	r0, #2
+ 1623              	.LVL148:
+ 305:usbd_conf.c   **** 
+ 1624              		.loc 1 305 1 view .LVU405
+ 1625 0016 08BD     		pop	{r3, pc}
+ 1626              	.L118:
+ 1627              		.align	2
+ 1628              	.L117:
+ 1629 0018 00000000 		.word	.LANCHOR2
+ 1630              		.cfi_endproc
+ 1631              	.LFE348:
+ 1633              		.section	.text.USBD_LL_PrepareReceive,"ax",%progbits
+ 1634              		.align	1
+ 1635              		.p2align 2,,3
+ 1636              		.global	USBD_LL_PrepareReceive
+ 1637              		.syntax unified
+ 1638              		.thumb
+ 1639              		.thumb_func
+ 1640              		.fpu fpv5-d16
+ 1642              	USBD_LL_PrepareReceive:
+ 1643              	.LVL149:
+ 1644              	.LFB349:
+ 309:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Receive(pdev->pData, ep_addr, pbuf, size));
+ 1645              		.loc 1 309 1 is_stmt 1 view -0
+ 1646              		.cfi_startproc
+ 1647              		@ args = 0, pretend = 0, frame = 0
+ 1648              		@ frame_needed = 0, uses_anonymous_args = 0
+ARM GAS  /tmp/ccbPGhD2.s 			page 40
+
+
+ 310:usbd_conf.c   **** }
+ 1649              		.loc 1 310 5 view .LVU407
+ 310:usbd_conf.c   **** }
+ 1650              		.loc 1 310 12 is_stmt 0 view .LVU408
+ 1651 0000 D0F89802 		ldr	r0, [r0, #664]
+ 1652              	.LVL150:
+ 309:usbd_conf.c   ****     return USBD_Get_USB_Status(HAL_PCD_EP_Receive(pdev->pData, ep_addr, pbuf, size));
+ 1653              		.loc 1 309 1 view .LVU409
+ 1654 0004 08B5     		push	{r3, lr}
+ 1655              		.cfi_def_cfa_offset 8
+ 1656              		.cfi_offset 3, -8
+ 1657              		.cfi_offset 14, -4
+ 310:usbd_conf.c   **** }
+ 1658              		.loc 1 310 12 view .LVU410
+ 1659 0006 FFF7FEFF 		bl	HAL_PCD_EP_Receive
+ 1660              	.LVL151:
+ 1661              	.LBB51:
+ 1662              	.LBI51:
+ 323:usbd_conf.c   **** {
+ 1663              		.loc 1 323 20 is_stmt 1 view .LVU411
+ 1664              	.LBE51:
+ 1665              		.loc 1 325 5 view .LVU412
+ 1666 000a 0328     		cmp	r0, #3
+ 1667 000c 02D8     		bhi	.L121
+ 1668 000e 024B     		ldr	r3, .L123
+ 1669 0010 185C     		ldrb	r0, [r3, r0]	@ zero_extendqisi2
+ 1670              	.LVL152:
+ 311:usbd_conf.c   **** 
+ 1671              		.loc 1 311 1 is_stmt 0 view .LVU413
+ 1672 0012 08BD     		pop	{r3, pc}
+ 1673              	.LVL153:
+ 1674              	.L121:
+ 310:usbd_conf.c   **** }
+ 1675              		.loc 1 310 12 view .LVU414
+ 1676 0014 0220     		movs	r0, #2
+ 1677              	.LVL154:
+ 311:usbd_conf.c   **** 
+ 1678              		.loc 1 311 1 view .LVU415
+ 1679 0016 08BD     		pop	{r3, pc}
+ 1680              	.L124:
+ 1681              		.align	2
+ 1682              	.L123:
+ 1683 0018 00000000 		.word	.LANCHOR2
+ 1684              		.cfi_endproc
+ 1685              	.LFE349:
+ 1687              		.section	.text.USBD_LL_GetRxDataSize,"ax",%progbits
+ 1688              		.align	1
+ 1689              		.p2align 2,,3
+ 1690              		.global	USBD_LL_GetRxDataSize
+ 1691              		.syntax unified
+ 1692              		.thumb
+ 1693              		.thumb_func
+ 1694              		.fpu fpv5-d16
+ 1696              	USBD_LL_GetRxDataSize:
+ 1697              	.LVL155:
+ 1698              	.LFB350:
+ 314:usbd_conf.c   ****     return HAL_PCD_EP_GetRxCount((PCD_HandleTypeDef *)pdev->pData, ep_addr);
+ARM GAS  /tmp/ccbPGhD2.s 			page 41
+
+
+ 1699              		.loc 1 314 1 is_stmt 1 view -0
+ 1700              		.cfi_startproc
+ 1701              		@ args = 0, pretend = 0, frame = 0
+ 1702              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1703              		@ link register save eliminated.
+ 315:usbd_conf.c   **** }
+ 1704              		.loc 1 315 5 view .LVU417
+ 315:usbd_conf.c   **** }
+ 1705              		.loc 1 315 12 is_stmt 0 view .LVU418
+ 1706 0000 D0F89802 		ldr	r0, [r0, #664]
+ 1707              	.LVL156:
+ 315:usbd_conf.c   **** }
+ 1708              		.loc 1 315 12 view .LVU419
+ 1709 0004 FFF7FEBF 		b	HAL_PCD_EP_GetRxCount
+ 1710              	.LVL157:
+ 315:usbd_conf.c   **** }
+ 1711              		.loc 1 315 12 view .LVU420
+ 1712              		.cfi_endproc
+ 1713              	.LFE350:
+ 1715              		.section	.text.USBD_LL_Delay,"ax",%progbits
+ 1716              		.align	1
+ 1717              		.p2align 2,,3
+ 1718              		.global	USBD_LL_Delay
+ 1719              		.syntax unified
+ 1720              		.thumb
+ 1721              		.thumb_func
+ 1722              		.fpu fpv5-d16
+ 1724              	USBD_LL_Delay:
+ 1725              	.LVL158:
+ 1726              	.LFB351:
+ 319:usbd_conf.c   ****     HAL_Delay(Delay);
+ 1727              		.loc 1 319 1 is_stmt 1 view -0
+ 1728              		.cfi_startproc
+ 1729              		@ args = 0, pretend = 0, frame = 0
+ 1730              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1731              		@ link register save eliminated.
+ 320:usbd_conf.c   **** }
+ 1732              		.loc 1 320 5 view .LVU422
+ 1733 0000 FFF7FEBF 		b	HAL_Delay
+ 1734              	.LVL159:
+ 320:usbd_conf.c   **** }
+ 1735              		.loc 1 320 5 is_stmt 0 view .LVU423
+ 1736              		.cfi_endproc
+ 1737              	.LFE351:
+ 1739              		.section	.text.USBD_Get_USB_Status,"ax",%progbits
+ 1740              		.align	1
+ 1741              		.p2align 2,,3
+ 1742              		.global	USBD_Get_USB_Status
+ 1743              		.syntax unified
+ 1744              		.thumb
+ 1745              		.thumb_func
+ 1746              		.fpu fpv5-d16
+ 1748              	USBD_Get_USB_Status:
+ 1749              	.LVL160:
+ 1750              	.LFB352:
+ 324:usbd_conf.c   ****     switch(hal_status)
+ 1751              		.loc 1 324 1 is_stmt 1 view -0
+ARM GAS  /tmp/ccbPGhD2.s 			page 42
+
+
+ 1752              		.cfi_startproc
+ 1753              		@ args = 0, pretend = 0, frame = 0
+ 1754              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1755              		@ link register save eliminated.
+ 1756              		.loc 1 325 5 view .LVU425
+ 1757 0000 0328     		cmp	r0, #3
+ 1758 0002 02D8     		bhi	.L129
+ 1759 0004 024B     		ldr	r3, .L130
+ 1760 0006 185C     		ldrb	r0, [r3, r0]	@ zero_extendqisi2
+ 1761              	.LVL161:
+ 1762              		.loc 1 325 5 is_stmt 0 view .LVU426
+ 1763 0008 7047     		bx	lr
+ 1764              	.LVL162:
+ 1765              	.L129:
+ 324:usbd_conf.c   ****     switch(hal_status)
+ 1766              		.loc 1 324 1 view .LVU427
+ 1767 000a 0220     		movs	r0, #2
+ 1768              	.LVL163:
+ 326:usbd_conf.c   ****     {
+ 327:usbd_conf.c   ****         case HAL_OK:      return USBD_OK;
+ 328:usbd_conf.c   ****         case HAL_ERROR:   return USBD_FAIL;
+ 329:usbd_conf.c   ****         case HAL_BUSY:    return USBD_BUSY;
+ 330:usbd_conf.c   ****         case HAL_TIMEOUT: return USBD_FAIL;
+ 331:usbd_conf.c   ****         default:          return USBD_FAIL;
+ 332:usbd_conf.c   ****     }
+ 333:usbd_conf.c   **** }
+ 1769              		.loc 1 333 1 view .LVU428
+ 1770 000c 7047     		bx	lr
+ 1771              	.L131:
+ 1772 000e 00BF     		.align	2
+ 1773              	.L130:
+ 1774 0010 00000000 		.word	.LANCHOR2
+ 1775              		.cfi_endproc
+ 1776              	.LFE352:
+ 1778              		.global	hpcd_USB_OTG_HS
+ 1779              		.global	hpcd_USB_OTG_FS
+ 1780              		.section	.bss.hpcd_USB_OTG_FS,"aw",%nobits
+ 1781              		.align	2
+ 1782              		.set	.LANCHOR0,. + 0
+ 1785              	hpcd_USB_OTG_FS:
+ 1786 0000 00000000 		.space	1032
+ 1786      00000000 
+ 1786      00000000 
+ 1786      00000000 
+ 1786      00000000 
+ 1787              		.section	.bss.hpcd_USB_OTG_HS,"aw",%nobits
+ 1788              		.align	2
+ 1789              		.set	.LANCHOR1,. + 0
+ 1792              	hpcd_USB_OTG_HS:
+ 1793 0000 00000000 		.space	1032
+ 1793      00000000 
+ 1793      00000000 
+ 1793      00000000 
+ 1793      00000000 
+ 1794              		.section	.rodata.CSWTCH.24,"a"
+ 1795              		.align	2
+ 1796              		.set	.LANCHOR2,. + 0
+ARM GAS  /tmp/ccbPGhD2.s 			page 43
+
+
+ 1799              	CSWTCH.24:
+ 1800 0000 00       		.byte	0
+ 1801 0001 02       		.byte	2
+ 1802 0002 01       		.byte	1
+ 1803 0003 02       		.byte	2
+ 1804              		.text
+ 1805              	.Letext0:
+ 1806              		.file 2 "/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/arm-none-eabi/include/machine/_defa
+ 1807              		.file 3 "/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/arm-none-eabi/include/sys/_stdint.h
+ 1808              		.file 4 "../../libDaisy/Drivers/CMSIS/Include/core_cm7.h"
+ 1809              		.file 5 "../../libDaisy/Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h750xx.h"
+ 1810              		.file 6 "../../libDaisy/Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h7xx.h"
+ 1811              		.file 7 "../../libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_def.h"
+ 1812              		.file 8 "../../libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_gpio.h"
+ 1813              		.file 9 "../../libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h"
+ 1814              		.file 10 "../../libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd.h"
+ 1815              		.file 11 "../../libDaisy/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h"
+ 1816              		.file 12 "../../libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h"
+ 1817              		.file 13 "../../libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h"
+ 1818              		.file 14 "../../libDaisy/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h"
+ 1819              		.file 15 "../../libDaisy/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_cortex.h"
+ARM GAS  /tmp/ccbPGhD2.s 			page 44
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 usbd_conf.c
+     /tmp/ccbPGhD2.s:17     .text.Error_Handler:0000000000000000 $t
+     /tmp/ccbPGhD2.s:26     .text.Error_Handler:0000000000000000 Error_Handler
+     /tmp/ccbPGhD2.s:44     .text.HAL_PCD_MspInit:0000000000000000 $t
+     /tmp/ccbPGhD2.s:52     .text.HAL_PCD_MspInit:0000000000000000 HAL_PCD_MspInit
+     /tmp/ccbPGhD2.s:321    .text.HAL_PCD_MspInit:000000000000012c $d
+     /tmp/ccbPGhD2.s:330    .text.HAL_PCD_MspDeInit:0000000000000000 $t
+     /tmp/ccbPGhD2.s:338    .text.HAL_PCD_MspDeInit:0000000000000000 HAL_PCD_MspDeInit
+     /tmp/ccbPGhD2.s:434    .text.HAL_PCD_MspDeInit:0000000000000070 $d
+     /tmp/ccbPGhD2.s:443    .text.HAL_PCD_SetupStageCallback:0000000000000000 $t
+     /tmp/ccbPGhD2.s:451    .text.HAL_PCD_SetupStageCallback:0000000000000000 HAL_PCD_SetupStageCallback
+     /tmp/ccbPGhD2.s:471    .text.HAL_PCD_DataOutStageCallback:0000000000000000 $t
+     /tmp/ccbPGhD2.s:479    .text.HAL_PCD_DataOutStageCallback:0000000000000000 HAL_PCD_DataOutStageCallback
+     /tmp/ccbPGhD2.s:501    .text.HAL_PCD_DataInStageCallback:0000000000000000 $t
+     /tmp/ccbPGhD2.s:509    .text.HAL_PCD_DataInStageCallback:0000000000000000 HAL_PCD_DataInStageCallback
+     /tmp/ccbPGhD2.s:531    .text.HAL_PCD_SOFCallback:0000000000000000 $t
+     /tmp/ccbPGhD2.s:539    .text.HAL_PCD_SOFCallback:0000000000000000 HAL_PCD_SOFCallback
+     /tmp/ccbPGhD2.s:557    .text.HAL_PCD_ResetCallback:0000000000000000 $t
+     /tmp/ccbPGhD2.s:565    .text.HAL_PCD_ResetCallback:0000000000000000 HAL_PCD_ResetCallback
+     /tmp/ccbPGhD2.s:623    .text.HAL_PCD_SuspendCallback:0000000000000000 $t
+     /tmp/ccbPGhD2.s:631    .text.HAL_PCD_SuspendCallback:0000000000000000 HAL_PCD_SuspendCallback
+     /tmp/ccbPGhD2.s:675    .text.HAL_PCD_SuspendCallback:000000000000002c $d
+     /tmp/ccbPGhD2.s:680    .text.HAL_PCD_ResumeCallback:0000000000000000 $t
+     /tmp/ccbPGhD2.s:688    .text.HAL_PCD_ResumeCallback:0000000000000000 HAL_PCD_ResumeCallback
+     /tmp/ccbPGhD2.s:706    .text.HAL_PCD_ISOOUTIncompleteCallback:0000000000000000 $t
+     /tmp/ccbPGhD2.s:714    .text.HAL_PCD_ISOOUTIncompleteCallback:0000000000000000 HAL_PCD_ISOOUTIncompleteCallback
+     /tmp/ccbPGhD2.s:733    .text.HAL_PCD_ISOINIncompleteCallback:0000000000000000 $t
+     /tmp/ccbPGhD2.s:741    .text.HAL_PCD_ISOINIncompleteCallback:0000000000000000 HAL_PCD_ISOINIncompleteCallback
+     /tmp/ccbPGhD2.s:760    .text.HAL_PCD_ConnectCallback:0000000000000000 $t
+     /tmp/ccbPGhD2.s:768    .text.HAL_PCD_ConnectCallback:0000000000000000 HAL_PCD_ConnectCallback
+     /tmp/ccbPGhD2.s:786    .text.HAL_PCD_DisconnectCallback:0000000000000000 $t
+     /tmp/ccbPGhD2.s:794    .text.HAL_PCD_DisconnectCallback:0000000000000000 HAL_PCD_DisconnectCallback
+     /tmp/ccbPGhD2.s:812    .text.USBD_LL_Init:0000000000000000 $t
+     /tmp/ccbPGhD2.s:820    .text.USBD_LL_Init:0000000000000000 USBD_LL_Init
+     /tmp/ccbPGhD2.s:1026   .text.USBD_LL_Init:00000000000000bc $d
+     /tmp/ccbPGhD2.s:1034   .text.USBD_LL_DeInit:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1042   .text.USBD_LL_DeInit:0000000000000000 USBD_LL_DeInit
+     /tmp/ccbPGhD2.s:1083   .text.USBD_LL_DeInit:0000000000000018 $d
+     /tmp/ccbPGhD2.s:1088   .text.USBD_LL_Start:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1096   .text.USBD_LL_Start:0000000000000000 USBD_LL_Start
+     /tmp/ccbPGhD2.s:1137   .text.USBD_LL_Start:0000000000000018 $d
+     /tmp/ccbPGhD2.s:1142   .text.USBD_LL_Stop:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1150   .text.USBD_LL_Stop:0000000000000000 USBD_LL_Stop
+     /tmp/ccbPGhD2.s:1191   .text.USBD_LL_Stop:0000000000000018 $d
+     /tmp/ccbPGhD2.s:1196   .text.USBD_LL_OpenEP:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1204   .text.USBD_LL_OpenEP:0000000000000000 USBD_LL_OpenEP
+     /tmp/ccbPGhD2.s:1253   .text.USBD_LL_OpenEP:0000000000000020 $d
+     /tmp/ccbPGhD2.s:1258   .text.USBD_LL_CloseEP:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1266   .text.USBD_LL_CloseEP:0000000000000000 USBD_LL_CloseEP
+     /tmp/ccbPGhD2.s:1307   .text.USBD_LL_CloseEP:0000000000000018 $d
+     /tmp/ccbPGhD2.s:1312   .text.USBD_LL_FlushEP:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1320   .text.USBD_LL_FlushEP:0000000000000000 USBD_LL_FlushEP
+     /tmp/ccbPGhD2.s:1361   .text.USBD_LL_FlushEP:0000000000000018 $d
+     /tmp/ccbPGhD2.s:1366   .text.USBD_LL_StallEP:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1374   .text.USBD_LL_StallEP:0000000000000000 USBD_LL_StallEP
+     /tmp/ccbPGhD2.s:1415   .text.USBD_LL_StallEP:0000000000000018 $d
+ARM GAS  /tmp/ccbPGhD2.s 			page 45
+
+
+     /tmp/ccbPGhD2.s:1420   .text.USBD_LL_ClearStallEP:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1428   .text.USBD_LL_ClearStallEP:0000000000000000 USBD_LL_ClearStallEP
+     /tmp/ccbPGhD2.s:1469   .text.USBD_LL_ClearStallEP:0000000000000018 $d
+     /tmp/ccbPGhD2.s:1474   .text.USBD_LL_IsStallEP:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1482   .text.USBD_LL_IsStallEP:0000000000000000 USBD_LL_IsStallEP
+     /tmp/ccbPGhD2.s:1526   .text.USBD_LL_SetUSBAddress:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1534   .text.USBD_LL_SetUSBAddress:0000000000000000 USBD_LL_SetUSBAddress
+     /tmp/ccbPGhD2.s:1575   .text.USBD_LL_SetUSBAddress:0000000000000018 $d
+     /tmp/ccbPGhD2.s:1580   .text.USBD_LL_Transmit:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1588   .text.USBD_LL_Transmit:0000000000000000 USBD_LL_Transmit
+     /tmp/ccbPGhD2.s:1629   .text.USBD_LL_Transmit:0000000000000018 $d
+     /tmp/ccbPGhD2.s:1634   .text.USBD_LL_PrepareReceive:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1642   .text.USBD_LL_PrepareReceive:0000000000000000 USBD_LL_PrepareReceive
+     /tmp/ccbPGhD2.s:1683   .text.USBD_LL_PrepareReceive:0000000000000018 $d
+     /tmp/ccbPGhD2.s:1688   .text.USBD_LL_GetRxDataSize:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1696   .text.USBD_LL_GetRxDataSize:0000000000000000 USBD_LL_GetRxDataSize
+     /tmp/ccbPGhD2.s:1716   .text.USBD_LL_Delay:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1724   .text.USBD_LL_Delay:0000000000000000 USBD_LL_Delay
+     /tmp/ccbPGhD2.s:1740   .text.USBD_Get_USB_Status:0000000000000000 $t
+     /tmp/ccbPGhD2.s:1748   .text.USBD_Get_USB_Status:0000000000000000 USBD_Get_USB_Status
+     /tmp/ccbPGhD2.s:1774   .text.USBD_Get_USB_Status:0000000000000010 $d
+     /tmp/ccbPGhD2.s:1792   .bss.hpcd_USB_OTG_HS:0000000000000000 hpcd_USB_OTG_HS
+     /tmp/ccbPGhD2.s:1785   .bss.hpcd_USB_OTG_FS:0000000000000000 hpcd_USB_OTG_FS
+     /tmp/ccbPGhD2.s:1781   .bss.hpcd_USB_OTG_FS:0000000000000000 $d
+     /tmp/ccbPGhD2.s:1788   .bss.hpcd_USB_OTG_HS:0000000000000000 $d
+     /tmp/ccbPGhD2.s:1795   .rodata.CSWTCH.24:0000000000000000 $d
+     /tmp/ccbPGhD2.s:1799   .rodata.CSWTCH.24:0000000000000000 CSWTCH.24
+
+UNDEFINED SYMBOLS
+HAL_GPIO_Init
+HAL_NVIC_SetPriority
+HAL_NVIC_EnableIRQ
+HAL_GPIO_DeInit
+HAL_NVIC_DisableIRQ
+USBD_LL_SetupStage
+USBD_LL_DataOutStage
+USBD_LL_DataInStage
+USBD_LL_SOF
+USBD_LL_SetSpeed
+USBD_LL_Reset
+USBD_LL_Suspend
+USBD_LL_Resume
+USBD_LL_IsoOUTIncomplete
+USBD_LL_IsoINIncomplete
+USBD_LL_DevConnected
+USBD_LL_DevDisconnected
+HAL_PCD_Init
+HAL_PCDEx_SetRxFiFo
+HAL_PCDEx_SetTxFiFo
+HAL_PCD_DeInit
+HAL_PCD_Start
+HAL_PCD_Stop
+HAL_PCD_EP_Open
+HAL_PCD_EP_Close
+HAL_PCD_EP_Flush
+HAL_PCD_EP_SetStall
+HAL_PCD_EP_ClrStall
+ARM GAS  /tmp/ccbPGhD2.s 			page 46
+
+
+HAL_PCD_SetAddress
+HAL_PCD_EP_Transmit
+HAL_PCD_EP_Receive
+HAL_PCD_EP_GetRxCount
+HAL_Delay
