@@ -17,6 +17,11 @@ extern "C" {
 extern USBD_StorageTypeDef USBD_MSC_Template_fops;
 void STORAGE_UserInit(void);
 
+extern volatile uint32_t g_msc_diag_state;
+extern volatile uint32_t g_msc_diag_counter;
+extern volatile uint32_t g_msc_sd_ready;
+extern volatile uint32_t g_msc_sd_block_count;
+
 #ifdef __cplusplus
 }
 #endif
