@@ -11,7 +11,7 @@ extern "C" {
 #include "stm32h7xx.h"
 #include "stm32h7xx_hal.h"
 
-#define MSC_MEDIA_PACKET            8192U
+#define MSC_MEDIA_PACKET            512U
 
 #define USBD_MAX_NUM_INTERFACES     1U
 #define USBD_MAX_NUM_CONFIGURATION  1U
