@@ -7,6 +7,8 @@ volatile uint32_t g_msc_diag_state = 0;
 volatile uint32_t g_msc_diag_counter = 0;
 volatile uint32_t g_msc_sd_ready = 0;
 volatile uint32_t g_msc_sd_block_count = 0;
+volatile uint32_t g_msc_last_scsi_cmd = 0;
+volatile uint32_t g_msc_scsi_cmd_count = 0;
 
 extern int STORAGE_SD_ReadBlocks(uint8_t* buf, uint32_t blk_addr, uint16_t blk_len);
 extern int STORAGE_SD_WriteBlocks(uint8_t* buf, uint32_t blk_addr, uint16_t blk_len);

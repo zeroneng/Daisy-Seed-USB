@@ -21,6 +21,8 @@ extern volatile uint32_t g_msc_diag_state;
 extern volatile uint32_t g_msc_diag_counter;
 extern volatile uint32_t g_msc_sd_ready;
 extern volatile uint32_t g_msc_sd_block_count;
+extern volatile uint32_t g_msc_last_scsi_cmd;
+extern volatile uint32_t g_msc_scsi_cmd_count;
 
 #ifdef __cplusplus
 }
