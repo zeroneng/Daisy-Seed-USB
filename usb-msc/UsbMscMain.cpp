@@ -8,6 +8,8 @@ extern "C" {
 #include "usbd_msc.h"
 #include "usbd_msc_storage.h"
 extern USBD_HandleTypeDef hUsbDeviceHS;
+extern volatile uint32_t g_storage_diag_state;
+extern volatile uint32_t g_storage_diag_counter;
 }
 
 DaisySeed hw;
@@ -23,13 +25,40 @@ static void InitUSBMSC(void)
 int main(void)
 {
     hw.Init();
+    STORAGE_UserInit();
     InitUSBMSC();
 
-    bool led = false;
     for(;;)
     {
-        led = !led;
+        uint32_t phase = (System::GetNow() / 125) & 0x7;
+        bool led = false;
+
+        switch(g_storage_diag_state)
+        {
+            case 0:
+                led = (phase == 0);
+                break;
+            case 1:
+                led = (phase == 0 || phase == 2);
+                break;
+            case 2:
+                led = (phase == 0 || phase == 2 || phase == 4);
+                break;
+            case 3:
+                led = (phase == 0 || phase == 2 || phase == 4 || phase == 6);
+                break;
+            case 4:
+                led = true;
+                break;
+            default:
+                led = ((System::GetNow() & 127) < 64);
+                break;
+        }
+
+        if(g_storage_diag_counter != 0 && (System::GetNow() & 511) < 64)
+            led = !led;
+
         hw.SetLed(led);
-        System::Delay(250);
+        System::Delay(20);
     }
 }

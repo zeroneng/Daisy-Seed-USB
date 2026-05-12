@@ -3,7 +3,10 @@ TARGET = UsbMsc
 LIBDAISY_DIR = ../libDaisy
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 
-CPP_SOURCES = UsbMscMain.cpp
+CPP_SOURCES = \
+UsbMscMain.cpp \
+UsbMscSdBackend.cpp
+
 C_SOURCES += \
 usbd_conf.c \
 usbd_desc.c \

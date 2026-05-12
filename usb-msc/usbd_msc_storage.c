@@ -1,19 +1,35 @@
 #include "usbd_msc_storage.h"
 
+#define USE_SD_CARD 0
+#define USE_SD_1BIT 0
+#define ALLOW_SD_FALLBACK_TO_1BIT 1
+
 #define STORAGE_LUN_NBR 1U
-#define STORAGE_BLK_NBR 128U
 #define STORAGE_BLK_SIZ 512U
+
+volatile uint32_t g_storage_diag_state = 0;
+volatile uint32_t g_storage_diag_counter = 0;
+
+#if USE_SD_CARD
+#include "stm32h7xx_hal.h"
+static uint8_t sd_ready = 0;
+static uint32_t sd_block_count = 0;
+extern void STORAGE_SD_UserInit(int use_sd_1bit);
+extern int STORAGE_SD_RefreshInfo(uint32_t* block_count, int allow_fallback_to_1bit);
+extern int STORAGE_SD_ReadBlocks(uint8_t* buf, uint32_t blk_addr, uint16_t blk_len);
+extern int STORAGE_SD_WriteBlocks(uint8_t* buf, uint32_t blk_addr, uint16_t blk_len);
+#else
+#define STORAGE_BLK_NBR 128U
 #define STORAGE_SIZE_BYTES (STORAGE_BLK_NBR * STORAGE_BLK_SIZ)
 #define STORAGE_NUM_FATS 1U
 #define STORAGE_ROOT_ENTRIES 16U
-#define STORAGE_ROOT_DIR_SECTORS ((STORAGE_ROOT_ENTRIES * 32U + STORAGE_BLK_SIZ - 1U) / STORAGE_BLK_SIZ)
 #define STORAGE_SECTORS_PER_FAT 1U
 #define STORAGE_RESERVED_SECTORS 1U
 #define STORAGE_SECTORS_PER_CLUSTER 1U
 #define STORAGE_MEDIA_DESCRIPTOR 0xF8U
-
 static uint8_t storage_data[STORAGE_SIZE_BYTES];
 static uint8_t storage_initialized = 0;
+#endif
 
 static int8_t STORAGE_Init(uint8_t lun);
 static int8_t STORAGE_GetCapacity(uint8_t lun, uint32_t* block_num, uint16_t* block_size);
@@ -22,9 +38,12 @@ static int8_t STORAGE_IsWriteProtected(uint8_t lun);
 static int8_t STORAGE_Read(uint8_t lun, uint8_t* buf, uint32_t blk_addr, uint16_t blk_len);
 static int8_t STORAGE_Write(uint8_t lun, uint8_t* buf, uint32_t blk_addr, uint16_t blk_len);
 static int8_t STORAGE_GetMaxLun(void);
+
+#if !USE_SD_CARD
 static void STORAGE_FormatIfNeeded(void);
 static void WriteLe16(uint8_t* p, uint16_t v);
 static void WriteLe32(uint8_t* p, uint32_t v);
+#endif
 
 static int8_t STORAGE_Inquirydata[] = {
     0x00,
@@ -36,9 +55,14 @@ static int8_t STORAGE_Inquirydata[] = {
     0x00,
     0x00,
     'Z','E','R','O','N','E',' ',' ',
+#if USE_SD_CARD
+    'R','H','Y','T','H','M',' ','S',
+    'D',' ','S','T','O','R','E',' ',
+#else
     'R','H','Y','T','H','M',' ','M',
     'S','C',' ','D','I','S','K',' ',
-    '0','.','0','2'
+#endif
+    '0','.','0','5'
 };
 
 USBD_StorageTypeDef USBD_MSC_Template_fops = {
@@ -52,6 +76,20 @@ USBD_StorageTypeDef USBD_MSC_Template_fops = {
     STORAGE_Inquirydata,
 };
 
+void STORAGE_UserInit(void)
+{
+#if USE_SD_CARD
+    STORAGE_SD_UserInit(USE_SD_1BIT);
+    sd_ready = 0;
+    sd_block_count = 0;
+    g_storage_diag_state = 1;
+#else
+    g_storage_diag_state = 0;
+#endif
+    g_storage_diag_counter = 0;
+}
+
+#if !USE_SD_CARD
 static void WriteLe16(uint8_t* p, uint16_t v)
 {
     p[0] = (uint8_t)(v & 0xFFU);
@@ -101,34 +139,71 @@ static void STORAGE_FormatIfNeeded(void)
     boot[510] = 0x55;
     boot[511] = 0xAA;
 
-    uint8_t* fat = &storage_data[STORAGE_RESERVED_SECTORS * STORAGE_BLK_SIZ];
-    fat[0] = STORAGE_MEDIA_DESCRIPTOR;
-    fat[1] = 0xFF;
-    fat[2] = 0xFF;
+    {
+        uint8_t* fat = &storage_data[STORAGE_RESERVED_SECTORS * STORAGE_BLK_SIZ];
+        fat[0] = STORAGE_MEDIA_DESCRIPTOR;
+        fat[1] = 0xFF;
+        fat[2] = 0xFF;
+    }
 
     storage_initialized = 1;
 }
+#endif
 
 static int8_t STORAGE_Init(uint8_t lun)
 {
     UNUSED(lun);
+#if USE_SD_CARD
+    if(STORAGE_SD_RefreshInfo(&sd_block_count, ALLOW_SD_FALLBACK_TO_1BIT) != 0)
+    {
+        g_storage_diag_state = 2;
+        return -1;
+    }
+    sd_ready = 1;
+    g_storage_diag_state = 3;
+    return 0;
+#else
     STORAGE_FormatIfNeeded();
     return 0;
+#endif
 }
 
 static int8_t STORAGE_GetCapacity(uint8_t lun, uint32_t* block_num, uint16_t* block_size)
 {
     UNUSED(lun);
-    *block_num = STORAGE_BLK_NBR;
     *block_size = STORAGE_BLK_SIZ;
+#if USE_SD_CARD
+    if(STORAGE_SD_RefreshInfo(&sd_block_count, ALLOW_SD_FALLBACK_TO_1BIT) != 0)
+    {
+        g_storage_diag_state = 2;
+        return -1;
+    }
+    *block_num = sd_block_count;
+    g_storage_diag_state = 3;
+#else
+    *block_num = STORAGE_BLK_NBR;
+#endif
     return 0;
 }
 
 static int8_t STORAGE_IsReady(uint8_t lun)
 {
     UNUSED(lun);
+#if USE_SD_CARD
+    if(sd_ready)
+        return 0;
+    if(STORAGE_SD_RefreshInfo(&sd_block_count, ALLOW_SD_FALLBACK_TO_1BIT) != 0)
+    {
+        g_storage_diag_state = 2;
+        return -1;
+    }
+    sd_ready = 1;
+    g_storage_diag_state = 3;
+    return 0;
+#else
     STORAGE_FormatIfNeeded();
     return 0;
+#endif
 }
 
 static int8_t STORAGE_IsWriteProtected(uint8_t lun)
@@ -140,25 +215,65 @@ static int8_t STORAGE_IsWriteProtected(uint8_t lun)
 static int8_t STORAGE_Read(uint8_t lun, uint8_t* buf, uint32_t blk_addr, uint16_t blk_len)
 {
     UNUSED(lun);
-    STORAGE_FormatIfNeeded();
-    uint32_t offset = blk_addr * STORAGE_BLK_SIZ;
-    uint32_t length = (uint32_t)blk_len * STORAGE_BLK_SIZ;
-    if(offset + length > STORAGE_SIZE_BYTES)
+#if USE_SD_CARD
+    g_storage_diag_counter++;
+    if(STORAGE_IsReady(lun) != 0)
         return -1;
-    USBD_memcpy(buf, &storage_data[offset], length);
+    if((uint64_t)blk_addr + blk_len > sd_block_count)
+    {
+        g_storage_diag_state = 4;
+        return -1;
+    }
+    if(STORAGE_SD_ReadBlocks(buf, blk_addr, blk_len) != 0)
+    {
+        g_storage_diag_state = 4;
+        return -1;
+    }
+    g_storage_diag_state = 3;
     return 0;
+#else
+    STORAGE_FormatIfNeeded();
+    {
+        uint32_t offset = blk_addr * STORAGE_BLK_SIZ;
+        uint32_t length = (uint32_t)blk_len * STORAGE_BLK_SIZ;
+        if(offset + length > STORAGE_SIZE_BYTES)
+            return -1;
+        USBD_memcpy(buf, &storage_data[offset], length);
+    }
+    return 0;
+#endif
 }
 
 static int8_t STORAGE_Write(uint8_t lun, uint8_t* buf, uint32_t blk_addr, uint16_t blk_len)
 {
     UNUSED(lun);
-    STORAGE_FormatIfNeeded();
-    uint32_t offset = blk_addr * STORAGE_BLK_SIZ;
-    uint32_t length = (uint32_t)blk_len * STORAGE_BLK_SIZ;
-    if(offset + length > STORAGE_SIZE_BYTES)
+#if USE_SD_CARD
+    g_storage_diag_counter++;
+    if(STORAGE_IsReady(lun) != 0)
         return -1;
-    USBD_memcpy(&storage_data[offset], buf, length);
+    if((uint64_t)blk_addr + blk_len > sd_block_count)
+    {
+        g_storage_diag_state = 4;
+        return -1;
+    }
+    if(STORAGE_SD_WriteBlocks(buf, blk_addr, blk_len) != 0)
+    {
+        g_storage_diag_state = 4;
+        return -1;
+    }
+    g_storage_diag_state = 3;
     return 0;
+#else
+    STORAGE_FormatIfNeeded();
+    {
+        uint32_t offset = blk_addr * STORAGE_BLK_SIZ;
+        uint32_t length = (uint32_t)blk_len * STORAGE_BLK_SIZ;
+        if(offset + length > STORAGE_SIZE_BYTES)
+            return -1;
+        USBD_memcpy(&storage_data[offset], buf, length);
+    }
+    return 0;
+#endif
 }
 
 static int8_t STORAGE_GetMaxLun(void)
