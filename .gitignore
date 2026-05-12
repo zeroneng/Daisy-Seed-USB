@@ -3,3 +3,6 @@ build/
 .DS_Store
 ._*
 libDaisy/
+usb-cdc/build/
+usb-hid/build/
+usb-audio/build/
