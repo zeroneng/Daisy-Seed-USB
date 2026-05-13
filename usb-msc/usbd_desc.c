@@ -11,15 +11,15 @@
 
 #define USBD_VID                     1155
 #define USBD_LANGID_STRING           1033
-#define USBD_MANUFACTURER_STRING     "ZERONE"
+#define USBD_MANUFACTURER_STRING     "Generic"
 
 #define USBD_PID_FS                  0x5762
-#define USBD_PRODUCT_STRING_FS       "RHYTHM MSC"
+#define USBD_PRODUCT_STRING_FS       "USB MSC Sample"
 #define USBD_CONFIGURATION_STRING_FS "MSC Config"
 #define USBD_INTERFACE_STRING_FS     "MSC Interface"
 
 #define USBD_PID_HS                  0x5763
-#define USBD_PRODUCT_STRING_HS       "RHYTHM MSC"
+#define USBD_PRODUCT_STRING_HS       "USB MSC Sample"
 #define USBD_CONFIGURATION_STRING_HS "MSC Config"
 #define USBD_INTERFACE_STRING_HS     "MSC Interface"
 

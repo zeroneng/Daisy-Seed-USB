@@ -43,8 +43,7 @@ index 00000000..c2968bb8
 +
 +## Relevance to current work
 +
-+RCON's current goal is a **minimal TinyUSB sample** using the **external USB port** on Daisy Seed / STM32H750 hardware.
-+That means this folder is useful mostly as a reference for:
+++That means this folder is useful mostly as a reference for:
 +
 +- USB peripheral setup
 +- clocking and hardware assumptions

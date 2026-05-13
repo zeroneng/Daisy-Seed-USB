@@ -23,4 +23,4 @@ At a high level this sample:
 
 ## Notes
 
-This is highly relevant to music-device workflows and may be closer to RHYTHM-style use cases than generic CDC/HID examples.
+This is highly relevant to music-device workflows and can be a useful reference beyond generic CDC/HID examples.

@@ -11,15 +11,15 @@
 
 #define USBD_VID                     1155
 #define USBD_LANGID_STRING           1033
-#define USBD_MANUFACTURER_STRING     "ZERONE"
+#define USBD_MANUFACTURER_STRING     "Generic"
 
 #define USBD_PID_FS                  0x5760
-#define USBD_PRODUCT_STRING_FS       "RHYTHM Composite"
+#define USBD_PRODUCT_STRING_FS       "USB Composite Sample"
 #define USBD_CONFIGURATION_STRING_FS "Composite Config"
 #define USBD_INTERFACE_STRING_FS     "Composite Interface"
 
 #define USBD_PID_HS                  0x5764
-#define USBD_PRODUCT_STRING_HS       "RHYTHM Composite"
+#define USBD_PRODUCT_STRING_HS       "USB Composite Sample"
 #define USBD_CONFIGURATION_STRING_HS "Composite Config"
 #define USBD_INTERFACE_STRING_HS     "Composite Interface"
 

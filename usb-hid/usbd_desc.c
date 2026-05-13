@@ -11,15 +11,15 @@
 
 #define USBD_VID                     1155
 #define USBD_LANGID_STRING           1033
-#define USBD_MANUFACTURER_STRING     "ZERONE"
+#define USBD_MANUFACTURER_STRING     "Generic"
 
 #define USBD_PID_FS                  0x5750
-#define USBD_PRODUCT_STRING_FS       "RHYTHM HID"
+#define USBD_PRODUCT_STRING_FS       "USB HID Sample"
 #define USBD_CONFIGURATION_STRING_FS "HID Config"
 #define USBD_INTERFACE_STRING_FS     "HID Interface"
 
 #define USBD_PID_HS                  0x5751
-#define USBD_PRODUCT_STRING_HS       "RHYTHM HID"
+#define USBD_PRODUCT_STRING_HS       "USB HID Sample"
 #define USBD_CONFIGURATION_STRING_HS "HID Config"
 #define USBD_INTERFACE_STRING_HS     "HID Interface"
 

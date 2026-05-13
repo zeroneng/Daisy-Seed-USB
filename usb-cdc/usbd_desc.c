@@ -11,15 +11,15 @@
 
 #define USBD_VID                     1155
 #define USBD_LANGID_STRING           1033
-#define USBD_MANUFACTURER_STRING     "ZERONE"
+#define USBD_MANUFACTURER_STRING     "Generic"
 
 #define USBD_PID_FS                  0x5760
-#define USBD_PRODUCT_STRING_FS       "RHYTHM CDC"
+#define USBD_PRODUCT_STRING_FS       "USB CDC Sample"
 #define USBD_CONFIGURATION_STRING_FS "CDC Config"
 #define USBD_INTERFACE_STRING_FS     "CDC Interface"
 
 #define USBD_PID_HS                  0x5761
-#define USBD_PRODUCT_STRING_HS       "RHYTHM CDC"
+#define USBD_PRODUCT_STRING_HS       "USB CDC Sample"
 #define USBD_CONFIGURATION_STRING_HS "CDC Config"
 #define USBD_INTERFACE_STRING_HS     "CDC Interface"
 

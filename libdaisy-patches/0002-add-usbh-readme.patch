@@ -36,8 +36,7 @@ index 00000000..b9268284
 +
 +## Relevance to current work
 +
-+RCON's current embedded goal is **not** USB host mode.
-+The current goal is a **minimal TinyUSB sample** on Daisy Seed / STM32H750 using the **external USB port** as a USB device/peripheral.
+++The current goal is a **minimal TinyUSB sample** on Daisy Seed / STM32H750 using the **external USB port** as a USB device/peripheral.
 +
 +So this folder is mostly reference material, not the main implementation path.
 +It may still be useful for understanding:

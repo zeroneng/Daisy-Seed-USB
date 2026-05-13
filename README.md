@@ -10,7 +10,7 @@ Most of this code was written or modified with the help of AI agents. Use at you
 
 MIT License
 
-Copyright (c) 2026 ZERONE, LLC
+Copyright (c) 2026
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal

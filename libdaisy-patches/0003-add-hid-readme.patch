@@ -49,8 +49,7 @@ index 00000000..352071e4
 +
 +## Relevance to current work
 +
-+RCON's current goal is a **minimal TinyUSB sample** using the **external USB port** on Daisy Seed / STM32H750 hardware.
-+That means this folder is useful mainly as a reference for:
+++That means this folder is useful mainly as a reference for:
 +
 +- how libDaisy currently exposes USB features to applications
 +- how USB MIDI is represented at a higher level
