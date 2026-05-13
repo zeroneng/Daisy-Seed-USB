@@ -1,0 +1,53 @@
+diff --git a/src/usbd/README.md b/src/usbd/README.md
+new file mode 100644
+index 00000000..c2968bb8
+--- /dev/null
++++ b/src/usbd/README.md
+@@ -0,0 +1,47 @@
++# libDaisy `src/usbd`
++
++## What this code is for
++
++This folder contains libDaisy's USB **device-side** glue code for STM32H7-based Daisy targets.
++It is the board/support layer that connects ST's USB Device middleware to the Daisy hardware and runtime.
++
++In practical terms, this code is responsible for letting a Daisy-based device behave like a USB peripheral when connected to a host computer.
++Examples include USB CDC serial and other USB device-class behaviors built on ST's middleware.
++
++## Main files
++
++- `usbd_conf.c` / `usbd_conf.h`
++  - low-level USB device configuration and callbacks
++  - connects the STM32 USB peripheral/HAL to the USB device stack
++- `usbd_desc.c` / `usbd_desc.h`
++  - USB descriptors such as vendor/product identity and string descriptors
++- `usbd_cdc_if.c` / `usbd_cdc_if.h`
++  - interface glue for USB CDC (virtual serial)
++
++## How it works
++
++At a high level:
++
++1. The STM32 USB peripheral is initialized.
++2. ST's USB Device stack is configured through `usbd_conf.c`.
++3. Descriptors in `usbd_desc.*` tell the host what kind of device this is.
++4. Class-specific interface code, such as `usbd_cdc_if.*`, handles data exchange for a given USB function.
++
++This folder is not a full standalone USB framework by itself.
++It is the adaptation layer that makes ST's USB device middleware usable on Daisy/libDaisy.
++
++## Why it matters
++
++If a project needs the Daisy to appear as a USB device to a computer, this folder is part of the path.
++However, this is still based on ST's USB device stack, not TinyUSB.
++
++## Relevance to current work
++
++RCON's current goal is a **minimal TinyUSB sample** using the **external USB port** on Daisy Seed / STM32H750 hardware.
++That means this folder is useful mostly as a reference for:
++
++- USB peripheral setup
++- clocking and hardware assumptions
++- descriptor/interface patterns already used in libDaisy
++
++It should not be mistaken for the final TinyUSB solution.

@@ -1,0 +1,60 @@
+diff --git a/src/hid/README.md b/src/hid/README.md
+new file mode 100644
+index 00000000..352071e4
+--- /dev/null
++++ b/src/hid/README.md
+@@ -0,0 +1,54 @@
++# libDaisy `src/hid`
++
++## What this code is for
++
++This folder contains libDaisy's higher-level human-interface and control abstractions.
++Despite the folder name `hid`, it is **not only** about USB HID.
++It includes general-purpose input/control code such as:
++
++- switches
++- encoders
++- LEDs / RGB LEDs
++- control inputs
++- MIDI helpers and parsers
++- USB wrappers such as `usb.*`, `usb_midi.*`, and `usb_host.*`
++- audio/control helper classes used by libDaisy applications
++
++## USB-relevant files in this folder
++
++The USB-related pieces here include:
++
++- `usb.cpp` / `usb.h`
++  - libDaisy wrapper/helper layer for USB behavior
++- `usb_midi.cpp` / `usb_midi.h`
++  - USB MIDI support helpers
++- `usb_host.cpp` / `usb_host.h`
++  - USB host helper abstractions
++
++## How it works
++
++This folder sits at a more application-facing level than `src/usbd` or `src/usbh`.
++Where those folders handle lower-level middleware integration, `src/hid` provides APIs and helpers that user code can call.
++
++For example:
++
++- MIDI parser code helps interpret incoming MIDI bytes/events
++- USB helper code wraps lower-level USB setup into simpler interfaces
++- switch/encoder/LED code exposes common embedded UI controls in reusable classes
++
++## Why it matters
++
++If a libDaisy project uses USB MIDI or user-facing controls, this folder is usually part of that story.
++It is where higher-level application logic meets the lower-level USB or hardware configuration layers.
++
++## Relevance to current work
++
++RCON's current goal is a **minimal TinyUSB sample** using the **external USB port** on Daisy Seed / STM32H750 hardware.
++That means this folder is useful mainly as a reference for:
++
++- how libDaisy currently exposes USB features to applications
++- how USB MIDI is represented at a higher level
++- what parts of libDaisy would eventually need bridging if TinyUSB were integrated later
++
++For the immediate TinyUSB bring-up, this folder is not the first place to start.
++The first focus should stay on the smallest possible low-level USB enumeration path.
