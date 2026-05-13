@@ -145,19 +145,23 @@ int main(void)
     System::Delay(2000);
 
     const char* sequence[] = {"a", "SPACE", "a", "SPACE", "a"};
-    for(size_t i = 0; i < 5; ++i)
-    {
-        Press(sequence[i]);
-        System::Delay(40);
-        Release(sequence[i]);
-        System::Delay(40);
-    }
 
     bool led = false;
     for(;;)
     {
-        led = !led;
-        hw.SetLed(led);
-        System::Delay(250);
+        for(size_t i = 0; i < 5; ++i)
+        {
+            Press(sequence[i]);
+            System::Delay(40);
+            Release(sequence[i]);
+            System::Delay(40);
+        }
+
+        for(int i = 0; i < 20; ++i)
+        {
+            led = !led;
+            hw.SetLed(led);
+            System::Delay(250);
+        }
     }
 }
