@@ -4,11 +4,11 @@
 #include <stdint.h>
 #include <math.h>
 
-#define USB_SAMPLE_RATE     44100.0f
+#define USB_SAMPLE_RATE     48000.0f
 #define AUDIO_CHANNELS      2U
 #define BYTES_PER_SAMPLE    2U
-#define USB_FRAMES_NOM      44U
-#define USB_FRAMES_MAX      45U
+#define USB_FRAMES_NOM      48U
+#define USB_FRAMES_MAX      48U
 
 #ifndef M_TWOPI
 #define M_TWOPI 6.28318530717958647692f
@@ -19,6 +19,11 @@ volatile uint32_t drift_corrections_down = 0U;
 volatile uint32_t underrun_events        = 0U;
 volatile uint32_t usb_packets_sent       = 0U;
 volatile uint32_t usb_last_frames        = USB_FRAMES_NOM;
+volatile uint32_t usb_last_size_arg      = 0U;
+volatile uint32_t usb_last_cmd_arg       = 0U;
+volatile uint32_t usb_min_size_arg       = 0xffffffffU;
+volatile uint32_t usb_max_size_arg       = 0U;
+volatile uint32_t usb_size_probe         = 0U;
 
 static float phase = 0.0f;
 static float phase_inc = 0.0f;
@@ -36,6 +41,11 @@ static int8_t Audio_Init(uint32_t AudioFreq, uint32_t Volume, uint32_t options)
     usb_frame_toggle = 0U;
     usb_packets_sent = 0U;
     usb_last_frames = USB_FRAMES_NOM;
+    usb_last_size_arg = 0U;
+    usb_last_cmd_arg = 0U;
+    usb_min_size_arg = 0xffffffffU;
+    usb_max_size_arg = 0U;
+    usb_size_probe = 0U;
     drift_corrections_up = 0U;
     drift_corrections_down = 0U;
     underrun_events = 0U;
@@ -50,7 +60,14 @@ static int8_t Audio_GetState(void)                         { return USBD_OK; }
 
 static uint16_t Audio_PeriodicTC(uint8_t *pbuf, uint32_t size, uint8_t cmd)
 {
-    (void)size;
+    usb_last_size_arg = size;
+    usb_size_probe = size;
+    usb_last_cmd_arg = cmd;
+    if(size < usb_min_size_arg)
+        usb_min_size_arg = size;
+    if(size > usb_max_size_arg)
+        usb_max_size_arg = size;
+
     if(cmd != AUDIO_IN_TC)
         return (USB_FRAMES_NOM * AUDIO_CHANNELS * BYTES_PER_SAMPLE);
 

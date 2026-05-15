@@ -7,7 +7,7 @@ extern "C" {
 
 #include "usbd_ioreq.h"
 
-#define USBD_AUDIO_FREQ             44100U
+#define USBD_AUDIO_FREQ             48000U
 #define USBD_MAX_NUM_INTERFACES     2U
 
 #define AUDIO_OUT_EP                0x01U
@@ -60,7 +60,7 @@ extern "C" {
 /* -----------------------------------------------------------------------
  * Packet size constants
  *
- * Stereo 16-bit 44.1kHz capture:
+ * Stereo 16-bit 48kHz capture:
  * 48 frames × 2ch × 2B = 192 bytes nominal
  * 49 frames × 2ch × 2B = 196 bytes maximum
  * --------------------------------------------------------------------- */
