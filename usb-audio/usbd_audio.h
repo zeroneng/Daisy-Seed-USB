@@ -7,7 +7,7 @@ extern "C" {
 
 #include "usbd_ioreq.h"
 
-#define USBD_AUDIO_FREQ             48000U
+#define USBD_AUDIO_FREQ             44100U
 #define USBD_MAX_NUM_INTERFACES     2U
 
 #define AUDIO_OUT_EP                0x01U
@@ -16,7 +16,7 @@ extern "C" {
 #define AUDIO_HS_BINTERVAL          0x01U
 #define AUDIO_FS_BINTERVAL          0x01U
 
-#define USB_AUDIO_CONFIG_DESC_SIZ   0x6DU   /* 109 bytes — descriptor size unchanged */
+#define USB_AUDIO_CONFIG_DESC_SIZ   0x6DU   /* 109 bytes — input-only stereo capture */
 #define AUDIO_INTERFACE_DESC_SIZE   0x09U
 #define USB_AUDIO_DESC_SIZ          0x09U
 #define AUDIO_STANDARD_ENDPOINT_DESC_SIZE   0x09U
@@ -60,15 +60,14 @@ extern "C" {
 /* -----------------------------------------------------------------------
  * Packet size constants
  *
- * AUDIO_OUT_PACKET     = 48 frames × 2ch × 2B = 192 bytes (nominal)
- * AUDIO_PACKET_MAX     = 49 frames × 2ch × 2B = 196 bytes (maximum)
- *
- * The endpoint MUST be opened at AUDIO_PACKET_MAX so the host accepts
- * 196-byte packets during drift correction. Sending 196 bytes to an
- * endpoint opened at 192 results in silent packet rejection.
+ * Stereo 16-bit 44.1kHz capture:
+ * 48 frames × 2ch × 2B = 192 bytes nominal
+ * 49 frames × 2ch × 2B = 196 bytes maximum
  * --------------------------------------------------------------------- */
 #define AUDIO_OUT_PACKET    (uint16_t)(((USBD_AUDIO_FREQ * 2U * 2U) / 1000U))       /* 192 */
 #define AUDIO_PACKET_MAX    (uint16_t)((((USBD_AUDIO_FREQ / 1000U) + 1U) * 2U * 2U)) /* 196 */
+#define AUDIO_IN_PACKET     AUDIO_OUT_PACKET
+#define AUDIO_IN_PACKET_MAX AUDIO_PACKET_MAX
 
 #define AUDIO_DEFAULT_VOLUME    70U
 
