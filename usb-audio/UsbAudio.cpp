@@ -2,6 +2,7 @@
 #include <math.h>
 #include "daisy_seed.h"
 #include "usbd_audio_if.h"
+#include "audio_fifo_shared.h"
 
 using namespace daisy;
 
@@ -18,11 +19,37 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 
 DaisySeed hw;
 
-static constexpr uint32_t FIFO_RING_SIZE = 8192u;
-static constexpr uint32_t FIFO_RING_MASK = FIFO_RING_SIZE - 1u;
+static constexpr uint32_t FIFO_RING_SIZE = 16384u;
+static constexpr uint32_t FIFO_RING_MASK = 16383u;
 static float fifo_l[FIFO_RING_SIZE] DSY_RAM_D2;
 static float fifo_r[FIFO_RING_SIZE] DSY_RAM_D2;
 static uint32_t fifoWritePtr = 0u;
+static uint32_t fifoWritePtrLast = 0u;
+
+extern "C" uint32_t AudioFifo_GetWritePtrLast(void)
+{
+    return fifoWritePtrLast;
+}
+
+extern "C" float AudioFifo_GetLeft(uint32_t index)
+{
+    return fifo_l[index & FIFO_RING_MASK];
+}
+
+extern "C" float AudioFifo_GetRight(uint32_t index)
+{
+    return fifo_r[index & FIFO_RING_MASK];
+}
+
+extern "C" uint32_t AudioFifo_GetRingSize(void)
+{
+    return FIFO_RING_SIZE;
+}
+
+extern "C" uint32_t AudioFifo_GetRingMask(void)
+{
+    return FIFO_RING_MASK;
+}
 
 static float phase = 0.0f;
 static float phase_inc = 0.0f;
@@ -47,6 +74,7 @@ void AudioCallback(AudioHandle::InputBuffer in,
         out[0][i] = s;
         out[1][i] = s;
     }
+    fifoWritePtrLast = fifoWritePtr;
 }
 
 static void InitUSBAudio(void)

@@ -3,12 +3,14 @@
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
+#include "audio_fifo_shared.h"
 
 #define USB_SAMPLE_RATE     48000.0f
 #define AUDIO_CHANNELS      2U
 #define BYTES_PER_SAMPLE    2U
 #define USB_FRAMES_NOM      48U
 #define USB_FRAMES_MAX      48U
+#define USB_BYTES_NOM       (USB_FRAMES_NOM * AUDIO_CHANNELS * BYTES_PER_SAMPLE)
 
 #ifndef M_TWOPI
 #define M_TWOPI 6.28318530717958647692f
@@ -60,35 +62,30 @@ static int8_t Audio_GetState(void)                         { return USBD_OK; }
 
 static uint16_t Audio_PeriodicTC(uint8_t *pbuf, uint32_t size, uint8_t cmd)
 {
-    usb_last_size_arg = size;
-    usb_size_probe = size;
-    usb_last_cmd_arg = cmd;
-    if(size < usb_min_size_arg)
-        usb_min_size_arg = size;
-    if(size > usb_max_size_arg)
-        usb_max_size_arg = size;
+    (void)size;
 
     if(cmd != AUDIO_IN_TC)
-        return (USB_FRAMES_NOM * AUDIO_CHANNELS * BYTES_PER_SAMPLE);
+        return USB_BYTES_NOM;
 
-    uint32_t out_frames = (usb_frame_toggle % 10U == 0U) ? USB_FRAMES_MAX : USB_FRAMES_NOM;
-    usb_frame_toggle++;
-    usb_last_frames = out_frames;
-
+    uint32_t out_frames = USB_FRAMES_NOM;
+    uint32_t ring_size = AudioFifo_GetRingSize();
+    uint32_t ring_mask = AudioFifo_GetRingMask();
+    uint32_t readPtr = AudioFifo_GetWritePtrLast();
     int16_t *out = (int16_t *)pbuf;
     for(uint32_t i = 0; i < out_frames; i++)
     {
-        float s = sinf(phase) * amplitude;
-        phase += phase_inc;
-        if(phase >= M_TWOPI)
-            phase -= M_TWOPI;
+        uint32_t rp = (readPtr + (ring_size / 2u)) & ring_mask;
+        float l = AudioFifo_GetLeft(rp);
+        float r = AudioFifo_GetLeft(rp);
 
-        int16_t sample = (int16_t)(s * 32767.0f);
-        out[i * AUDIO_CHANNELS + 0] = sample;
-        out[i * AUDIO_CHANNELS + 1] = sample;
+        int16_t sl = (int16_t)(l * 32767.0f);
+        int16_t sr = (int16_t)(r * 32767.0f);
+        out[i * AUDIO_CHANNELS + 0] = sl;
+        out[i * AUDIO_CHANNELS + 1] = sr;
+
+        readPtr = (readPtr + 1u) & ring_mask;
     }
 
-    usb_packets_sent++;
     return (uint16_t)(out_frames * AUDIO_CHANNELS * BYTES_PER_SAMPLE);
 }
 

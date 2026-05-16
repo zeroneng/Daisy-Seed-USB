@@ -23,13 +23,13 @@
 
 /* Internal FS connector — the one on the Daisy Seed board */
 #define USBD_PID_FS                 0x5741
-#define USBD_PRODUCT_STRING_FS      "JamMate Audio In"
+#define USBD_PRODUCT_STRING_FS      "RHYTHM Audio"
 #define USBD_CONFIGURATION_STRING_FS "Audio Config"
 #define USBD_INTERFACE_STRING_FS    "Audio Streaming"
 
 /* External HS connector — not present on Daisy Seed, keep for completeness */
 #define USBD_PID_HS                 0x5742
-#define USBD_PRODUCT_STRING_HS      "JamMate Audio In HS"
+#define USBD_PRODUCT_STRING_HS      "RHYTHM Audio"
 #define USBD_CONFIGURATION_STRING_HS "Audio Config"
 #define USBD_INTERFACE_STRING_HS    "Audio Streaming"
 
