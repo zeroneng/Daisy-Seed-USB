@@ -1,7 +1,6 @@
 TARGET = UsbAudio
 
 LIBDAISY_DIR = ../../libDaisy
-DAISYSP_DIR = ../../DaisySP
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 
 CPP_SOURCES = UsbAudio.cpp

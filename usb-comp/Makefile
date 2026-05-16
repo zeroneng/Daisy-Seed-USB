@@ -1,6 +1,6 @@
 TARGET = UsbComp
 
-LIBDAISY_DIR = ../libDaisy
+LIBDAISY_DIR = ../../libDaisy
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 
 CPP_SOURCES = UsbComp.cpp
@@ -8,15 +8,15 @@ C_SOURCES += \
 usbd_conf.c \
 usbd_desc.c \
 usb_comp_cdc_if.c \
-../libDaisy/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c \
-../libDaisy/Middlewares/ST/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c \
-../libDaisy/Middlewares/ST/STM32_USB_Device_Library/Class/CompositeBuilder/Src/usbd_composite_builder.c
+$(LIBDAISY_DIR)/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c \
+$(LIBDAISY_DIR)/Middlewares/ST/STM32_USB_Device_Library/Class/HID/Src/usbd_hid.c \
+$(LIBDAISY_DIR)/Middlewares/ST/STM32_USB_Device_Library/Class/CompositeBuilder/Src/usbd_composite_builder.c
 
 C_INCLUDES += \
--I../libDaisy/src/usbd \
--I../libDaisy/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc \
--I../libDaisy/Middlewares/ST/STM32_USB_Device_Library/Class/HID/Inc \
--I../libDaisy/Middlewares/ST/STM32_USB_Device_Library/Class/CompositeBuilder/Inc
+-I$(LIBDAISY_DIR)/src/usbd \
+-I$(LIBDAISY_DIR)/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc \
+-I$(LIBDAISY_DIR)/Middlewares/ST/STM32_USB_Device_Library/Class/HID/Inc \
+-I$(LIBDAISY_DIR)/Middlewares/ST/STM32_USB_Device_Library/Class/CompositeBuilder/Inc
 
 C_DEFS += \
 -DUSE_USBD_COMPOSITE \

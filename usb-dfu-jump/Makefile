@@ -1,12 +1,9 @@
-TARGET = UsbMidi
+TARGET = UsbDfuJump
 
 LIBDAISY_DIR = ../../libDaisy
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 
-CPP_SOURCES = UsbMidi.cpp
-C_SOURCES += \
-usbd_conf.c \
-usbd_desc.c
+CPP_SOURCES = UsbDfuJump.cpp
 
 USE_FATFS = 0
 
