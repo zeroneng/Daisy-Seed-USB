@@ -65,13 +65,16 @@
 #include "stm32h7xx_hal.h"
 #include <string.h>
 #include <stdint.h>
+#include <math.h>
+#include "audio_fifo_shared.h"
 
-#define AUDIO_CHANNELS        2U
-#define BYTES_PER_SAMPLE      2U
-#define PLAYBACK_RING_FRAMES  2048U
-#define PLAYBACK_RING_MASK    (PLAYBACK_RING_FRAMES - 1U)
-#define PLAYBACK_TARGET       (PLAYBACK_RING_FRAMES / 2U)
-#define PLAYBACK_DRIFT_THRESH 96U
+#define USB_SAMPLE_RATE     48000.0f
+#define AUDIO_CHANNELS      2U
+#define BYTES_PER_SAMPLE    2U
+#define USB_FRAMES_NOM      48U
+#define USB_BYTES_NOM       (USB_FRAMES_NOM * AUDIO_CHANNELS * BYTES_PER_SAMPLE)
+#define PLAYBACK_RING_FRAMES 2048U
+#define PLAYBACK_RING_MASK   (PLAYBACK_RING_FRAMES - 1U)
 
 volatile uint32_t drift_corrections_up   = 0U;
 volatile uint32_t drift_corrections_down = 0U;
@@ -80,11 +83,6 @@ volatile uint32_t underrun_events        = 0U;
 static __attribute__((section(".heap"))) int16_t playback_ring[PLAYBACK_RING_FRAMES * AUDIO_CHANNELS];
 static volatile uint32_t playback_wr = 0U;
 static volatile uint32_t playback_rd = 0U;
-
-static inline uint32_t PlaybackRingLevel(void)
-{
-    return (playback_wr - playback_rd) & PLAYBACK_RING_MASK;
-}
 
 /* -----------------------------------------------------------------------
  * Init
@@ -132,10 +130,31 @@ static int8_t Audio_GetState  (void)                            { return USBD_OK
  * --------------------------------------------------------------------- */
 static uint16_t Audio_PeriodicTC(uint8_t *pbuf, uint32_t size, uint8_t cmd)
 {
-    (void)pbuf;
     (void)size;
-    (void)cmd;
-    return AUDIO_OUT_PACKET;
+
+    if(cmd != AUDIO_IN_TC)
+        return USB_BYTES_NOM;
+
+    uint32_t out_frames = USB_FRAMES_NOM;
+    uint32_t ring_size = AudioFifo_GetRingSize();
+    uint32_t ring_mask = AudioFifo_GetRingMask();
+    uint32_t readPtr = AudioFifo_GetWritePtrLast();
+    int16_t *out = (int16_t *)pbuf;
+    for(uint32_t i = 0; i < out_frames; i++)
+    {
+        uint32_t rp = (readPtr + (ring_size / 2u)) & ring_mask;
+        float l = AudioFifo_GetLeft(rp);
+        float r = AudioFifo_GetRight(rp);
+
+        int16_t sl = (int16_t)(l * 32767.0f);
+        int16_t sr = (int16_t)(r * 32767.0f);
+        out[i * AUDIO_CHANNELS + 0] = sl;
+        out[i * AUDIO_CHANNELS + 1] = sr;
+
+        readPtr = (readPtr + 1u) & ring_mask;
+    }
+
+    return (uint16_t)(out_frames * AUDIO_CHANNELS * BYTES_PER_SAMPLE);
 }
 
 /* -----------------------------------------------------------------------
@@ -176,61 +195,3 @@ void AudioIF_PopPlaybackSamples(int16_t *samples, uint32_t num_frames)
         }
     }
 }
-
-/*
-void AudioIF_PopPlaybackSamples(int16_t *samples, uint32_t num_frames)
-{
-    uint32_t level = PlaybackRingLevel();
-    uint32_t high  = PLAYBACK_TARGET + PLAYBACK_DRIFT_THRESH;
-    uint32_t low   = PLAYBACK_TARGET - PLAYBACK_DRIFT_THRESH;
-    uint8_t  drop_one = 0U;
-    uint8_t  dup_one  = 0U;
-    int16_t  last_l   = 0;
-    int16_t  last_r   = 0;
-
-    if(level > high)
-    {
-        drop_one = 1U;
-        drift_corrections_up++;
-    }
-    else if(level < low)
-    {
-        dup_one = 1U;
-        drift_corrections_down++;
-    }
-
-    for(uint32_t i = 0; i < num_frames; i++)
-    {
-        if(dup_one && i == (num_frames - 1U))
-        {
-            samples[i * AUDIO_CHANNELS + 0] = last_l;
-            samples[i * AUDIO_CHANNELS + 1] = last_r;
-            continue;
-        }
-
-        if(playback_rd != playback_wr)
-        {
-            int16_t l = playback_ring[playback_rd * AUDIO_CHANNELS + 0];
-            int16_t r = playback_ring[playback_rd * AUDIO_CHANNELS + 1];
-            samples[i * AUDIO_CHANNELS + 0] = l;
-            samples[i * AUDIO_CHANNELS + 1] = r;
-            last_l = l;
-            last_r = r;
-            playback_rd = (playback_rd + 1U) & PLAYBACK_RING_MASK;
-        }
-        else
-        {
-            samples[i * AUDIO_CHANNELS + 0] = 0;
-            samples[i * AUDIO_CHANNELS + 1] = 0;
-            last_l = 0;
-            last_r = 0;
-            underrun_events++;
-        }
-    }
-
-    if(drop_one && playback_rd != playback_wr)
-    {
-        playback_rd = (playback_rd + 1U) & PLAYBACK_RING_MASK;
-    }
-}
-*/

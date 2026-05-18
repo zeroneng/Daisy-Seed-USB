@@ -1,13 +1,15 @@
 /**
   ******************************************************************************
   * @file    usbd_conf.c
-  * @brief   USB Device board support / PCD glue layer for Daisy Seed HID sample
+  * @brief   USB Device board support / PCD glue layer for Daisy Seed UAC1
   *
-  * Notes for this sample:
-  *  1. Sof_enable = ENABLE to preserve standard USB device timing callbacks
-  *  2. FIFO sizes are set conservatively for this sample and can be tuned later
-  *  3. vbus_sensing_enable remains ENABLE for FS (Daisy has VBUS sense on PA9)
-  *  4. HS init block is kept for completeness, though Daisy Seed typically uses FS
+  * Changes from libDaisy CDC baseline:
+  *  1. Sof_enable = ENABLE  — audio class USBD_AUDIO_SOF() needs SOF events
+  *  2. TX FIFO 1 enlarged    — audio IN packets are 192 bytes; old 0x80 (128B)
+  *                             was borderline; 0xC0 (192B) gives clean headroom
+  *  3. vbus_sensing_enable   — left ENABLE for FS (Daisy has VBUS sense on PA9)
+  *  4. HS init removed       — Daisy Seed only has the FS connector exposed;
+  *                             keep the HS block for completeness but it's unused
   ******************************************************************************
   */
 
@@ -34,7 +36,7 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef *pcdHandle)
     {
         __HAL_RCC_GPIOA_CLK_ENABLE();
 
-        /* PA11 = DM, PA12 = DP, PA9 = VBUS (unused in external build) */
+        /* PA11 = DM, PA12 = DP, PA9 = VBUS */
         GPIO_InitStruct.Pin       = GPIO_PIN_12 | GPIO_PIN_11;
         GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Pull      = GPIO_NOPULL;
@@ -50,7 +52,7 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef *pcdHandle)
 
         __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
 
-        /* USB IRQ priority for the sample */
+        /* Priority 0 so audio IRQs aren't delayed */
         HAL_NVIC_SetPriority(OTG_FS_EP1_OUT_IRQn, 2, 0);
         HAL_NVIC_EnableIRQ(OTG_FS_EP1_OUT_IRQn);
         HAL_NVIC_SetPriority(OTG_FS_EP1_IN_IRQn, 2, 0);
@@ -118,7 +120,8 @@ void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef *hpcd, uint8_t epnum)
                          hpcd->IN_ep[epnum].xfer_buff);
 }
 
-/* SOF callback is forwarded into the USB device stack. */
+/* SOF is essential for the audio class — it drives the periodic transfer
+   callback that feeds the isochronous IN endpoint with new audio data. */
 void HAL_PCD_SOFCallback(PCD_HandleTypeDef *hpcd)
 {
     USBD_LL_SOF((USBD_HandleTypeDef *)hpcd->pData);
@@ -186,7 +189,9 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
         hpcd_USB_OTG_FS.Init.dma_enable              = DISABLE;
         hpcd_USB_OTG_FS.Init.phy_itface              = PCD_PHY_EMBEDDED;
 
-        /* Keep SOF enabled for normal USB device stack timing/callback flow. */
+        /* ENABLE SOF — the USBD_AUDIO_SOF() callback drives the periodic
+           audio data feed on the isochronous IN endpoint.  Without SOF,
+           audio streaming will not start. */
         hpcd_USB_OTG_FS.Init.Sof_enable              = ENABLE;
 
         hpcd_USB_OTG_FS.Init.low_power_enable        = DISABLE;
@@ -197,9 +202,14 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
 
         if(HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK) { Error_Handler(); }
 
-        /* FIFO allocation (in 32-bit words, total FS FIFO = 320 words = 1280 B).
-           These values are conservative sample defaults and can be adjusted if the
-           project later needs a different endpoint layout. */
+        /* FIFO allocation (in 32-bit words, total FS FIFO = 320 words = 1280 B):
+             Rx FIFO   = 0x80 words (128 * 4 = 512 B) — shared receive FIFO
+             TX0 FIFO  = 0x40 words (64  * 4 = 256 B) — EP0 control
+             TX1 FIFO  = 0xC0 words (192 * 4 = 768 B) — EP1 IN audio
+                                                          (192 B/packet * 2 = 384 B min;
+                                                           0xC0 words = 768 B gives 2-packet headroom)
+           Total used = 0x80 + 0x40 + 0xC0 = 0x140 = 320 words ✓
+        */
         HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x80);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x40);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0xC0);
@@ -291,13 +301,13 @@ USBD_StatusTypeDef USBD_LL_SetUSBAddress(USBD_HandleTypeDef *pdev, uint8_t dev_a
 USBD_StatusTypeDef USBD_LL_Transmit(USBD_HandleTypeDef *pdev,
                                      uint8_t ep_addr, uint8_t *pbuf, uint32_t size)
 {
-    return USBD_Get_USB_Status(HAL_PCD_EP_Transmit(pdev->pData, ep_addr, pbuf, (uint16_t)size));
+    return USBD_Get_USB_Status(HAL_PCD_EP_Transmit(pdev->pData, ep_addr, pbuf, size));
 }
 
 USBD_StatusTypeDef USBD_LL_PrepareReceive(USBD_HandleTypeDef *pdev,
                                            uint8_t ep_addr, uint8_t *pbuf, uint32_t size)
 {
-    return USBD_Get_USB_Status(HAL_PCD_EP_Receive(pdev->pData, ep_addr, pbuf, (uint16_t)size));
+    return USBD_Get_USB_Status(HAL_PCD_EP_Receive(pdev->pData, ep_addr, pbuf, size));
 }
 
 uint32_t USBD_LL_GetRxDataSize(USBD_HandleTypeDef *pdev, uint8_t ep_addr)
