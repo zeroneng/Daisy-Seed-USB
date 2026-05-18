@@ -261,6 +261,12 @@ That keeps the sample cleaner as an import/reference base for another project.
 
 If you want active HID behavior, add it explicitly in the target project or behind a dedicated test path.
 
+## Current sample settings
+
+- Full-speed HID polling interval is set locally to **1 ms**
+- The effective setting is enforced in `usb-hid/usbd_hid_kbd.c` so the endpoint descriptor and runtime interval both use `0x01`
+- This keeps the change local to the sample without modifying libDaisy source.
+
 ## Notes
 
 This folder is useful for validating report-based USB device behavior rather than serial/audio/storage behavior.

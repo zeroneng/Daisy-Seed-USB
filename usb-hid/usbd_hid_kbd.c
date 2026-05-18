@@ -80,7 +80,7 @@ __ALIGN_BEGIN static uint8_t USBD_HID_CfgDesc[USB_HID_CONFIG_DESC_SIZ] __ALIGN_E
   0x03,
   0x08,
   0x00,
-  HID_FS_BINTERVAL,
+  0x01,
 };
 #endif
 
@@ -166,7 +166,7 @@ static uint8_t USBD_HID_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 #ifdef USE_USBD_COMPOSITE
   HIDInEpAdd = USBD_CoreGetEPAdd(pdev, USBD_EP_IN, USBD_EP_TYPE_INTR, (uint8_t)pdev->classId);
 #endif
-  pdev->ep_in[HIDInEpAdd & 0xFU].bInterval = (pdev->dev_speed == USBD_SPEED_HIGH) ? HID_HS_BINTERVAL : HID_FS_BINTERVAL;
+  pdev->ep_in[HIDInEpAdd & 0xFU].bInterval = (pdev->dev_speed == USBD_SPEED_HIGH) ? HID_HS_BINTERVAL : 0x01;
   (void)USBD_LL_OpenEP(pdev, HIDInEpAdd, USBD_EP_TYPE_INTR, 0x08);
   pdev->ep_in[HIDInEpAdd & 0xFU].is_used = 1U;
   hhid->state = USBD_HID_IDLE;
@@ -286,7 +286,7 @@ uint8_t USBD_HID_SendReport(USBD_HandleTypeDef *pdev, uint8_t *report, uint16_t 
 
 uint32_t USBD_HID_GetPollingInterval(USBD_HandleTypeDef *pdev)
 {
-  return (pdev->dev_speed == USBD_SPEED_HIGH) ? (((1U << (HID_HS_BINTERVAL - 1U))) / 8U) : HID_FS_BINTERVAL;
+  return (pdev->dev_speed == USBD_SPEED_HIGH) ? (((1U << (HID_HS_BINTERVAL - 1U))) / 8U) : 0x01;
 }
 
 #ifndef USE_USBD_COMPOSITE
@@ -294,7 +294,7 @@ static uint8_t *USBD_HID_GetFSCfgDesc(uint16_t *length)
 {
   USBD_EpDescTypeDef *pEpDesc = USBD_GetEpDesc(USBD_HID_CfgDesc, HID_EPIN_ADDR);
   if(pEpDesc != NULL)
-    pEpDesc->bInterval = HID_FS_BINTERVAL;
+    pEpDesc->bInterval = 0x01;
   *length = (uint16_t)sizeof(USBD_HID_CfgDesc);
   return USBD_HID_CfgDesc;
 }
@@ -312,7 +312,7 @@ static uint8_t *USBD_HID_GetOtherSpeedCfgDesc(uint16_t *length)
 {
   USBD_EpDescTypeDef *pEpDesc = USBD_GetEpDesc(USBD_HID_CfgDesc, HID_EPIN_ADDR);
   if(pEpDesc != NULL)
-    pEpDesc->bInterval = HID_FS_BINTERVAL;
+    pEpDesc->bInterval = 0x01;
   *length = (uint16_t)sizeof(USBD_HID_CfgDesc);
   return USBD_HID_CfgDesc;
 }
