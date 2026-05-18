@@ -270,3 +270,5 @@ If you want active HID behavior, add it explicitly in the target project or behi
 ## Notes
 
 This folder is useful for validating report-based USB device behavior rather than serial/audio/storage behavior.
+
+Small maintenance note: after changes, prefer verifying build, flash, and host HID enumeration as a quick sanity pass.
