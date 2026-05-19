@@ -7,7 +7,8 @@ HID is the USB class used for devices such as keyboards, mice, and other report-
 
 ## Main files
 
-- `UsbHid.cpp` — main application/sample entry point
+- `UsbHid.cpp` — thin sample application shell
+- `usb_hid_helpers.cpp` / `usb_hid_helpers.h` — reusable HID init and key-report helpers
 - `usbd_hid_kbd.c` — HID keyboard/report handling code
 - `usbd_conf.c` / `usbd_conf.h` — USB device configuration glue
 - `usbd_desc.c` / `usbd_desc.h` — HID-oriented device descriptors
@@ -230,12 +231,15 @@ void UsbMode_SendHidReport(const uint8_t* data, size_t len)
 
 If the target project is switching into HID mode, the current minimum local file set from this sample is:
 
-- `UsbHid.cpp`
+- `usb_hid_helpers.cpp`
+- `usb_hid_helpers.h`
 - `usbd_conf.c`
 - `usbd_conf.h`
 - `usbd_desc.c`
 - `usbd_desc.h`
 - `usbd_hid_kbd.c`
+
+`UsbHid.cpp` is now just the example shell and does not need to be imported as part of the reusable HID layer.
 
 Required build addition:
 
