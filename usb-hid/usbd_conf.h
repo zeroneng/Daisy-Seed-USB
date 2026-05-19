@@ -21,16 +21,16 @@ extern "C" {
 /* USB Device configuration                                                    */
 /* -------------------------------------------------------------------------- */
 
-/* This HID sample uses a single USB interface. If the project later becomes a
-   composite device, revisit this value to match the descriptor layout. */
+/* This HID implementation uses a single USB interface. If the project later
+   becomes composite, revisit this value to match the descriptor layout. */
 #define USBD_MAX_NUM_INTERFACES     1U
 
 #define USBD_MAX_NUM_CONFIGURATION  1U
 #define USBD_MAX_STR_DESC_SIZ       512U
 #define USBD_SUPPORT_USER_STRING    1U
 
-/* Keep USB middleware debug logging disabled in this sample unless the target
-   project provides a safe debug output path for it. */
+/* Keep USB middleware debug logging disabled unless the target project
+   provides a safe debug output path. */
 #define USBD_DEBUG_LEVEL            0U
 
 #define USBD_LPM_ENABLED            0U

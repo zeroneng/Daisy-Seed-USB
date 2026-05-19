@@ -34,7 +34,7 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef *pcdHandle)
     {
         __HAL_RCC_GPIOA_CLK_ENABLE();
 
-        /* PA11 = DM, PA12 = DP, PA9 = VBUS (unused in external build) */
+        /* PA11 = DM, PA12 = DP, PA9 = VBUS sense */
         GPIO_InitStruct.Pin       = GPIO_PIN_12 | GPIO_PIN_11;
         GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Pull      = GPIO_NOPULL;
@@ -50,7 +50,7 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef *pcdHandle)
 
         __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
 
-        /* USB IRQ priority for the sample */
+        /* USB IRQ priority */
         HAL_NVIC_SetPriority(OTG_FS_EP1_OUT_IRQn, 2, 0);
         HAL_NVIC_EnableIRQ(OTG_FS_EP1_OUT_IRQn);
         HAL_NVIC_SetPriority(OTG_FS_EP1_IN_IRQn, 2, 0);
@@ -186,7 +186,7 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
         hpcd_USB_OTG_FS.Init.dma_enable              = DISABLE;
         hpcd_USB_OTG_FS.Init.phy_itface              = PCD_PHY_EMBEDDED;
 
-        /* Keep SOF enabled for normal USB device stack timing/callback flow. */
+        /* Keep SOF enabled for normal USB device timing/callback flow. */
         hpcd_USB_OTG_FS.Init.Sof_enable              = ENABLE;
 
         hpcd_USB_OTG_FS.Init.low_power_enable        = DISABLE;
@@ -198,8 +198,8 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
         if(HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK) { Error_Handler(); }
 
         /* FIFO allocation (in 32-bit words, total FS FIFO = 320 words = 1280 B).
-           These values are conservative sample defaults and can be adjusted if the
-           project later needs a different endpoint layout. */
+           These values are conservative defaults and can be adjusted if the
+           endpoint layout changes. */
         HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x80);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x40);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0xC0);

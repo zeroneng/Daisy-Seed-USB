@@ -71,14 +71,14 @@ __ALIGN_BEGIN static uint8_t USBD_HID_CfgDesc[USB_HID_CONFIG_DESC_SIZ] __ALIGN_E
   0x00,
   0x01,
   0x22,
-  0x3F,
+  0x3A,
   0x00,
 
   0x07,
   USB_DESC_TYPE_ENDPOINT,
   HID_EPIN_ADDR,
   0x03,
-  0x08,
+  0x21,
   0x00,
   0x01,
 };
@@ -93,7 +93,7 @@ __ALIGN_BEGIN static uint8_t USBD_HID_Desc[USB_HID_DESC_SIZ] __ALIGN_END =
   0x00,
   0x01,
   0x22,
-  0x3F,
+  0x3A,
   0x00,
 };
 
@@ -113,7 +113,8 @@ __ALIGN_BEGIN static uint8_t USBD_HID_DeviceQualifierDesc[USB_LEN_DEV_QUALIFIER_
 };
 #endif
 
-__ALIGN_BEGIN static uint8_t HID_KEYBOARD_ReportDesc[63] __ALIGN_END =
+/* Old boot keyboard descriptor kept for reference.
+__ALIGN_BEGIN static uint8_t HID_KEYBOARD_ReportDesc_Boot[71] __ALIGN_END =
 {
   0x05, 0x01,
   0x09, 0x06,
@@ -138,14 +139,49 @@ __ALIGN_BEGIN static uint8_t HID_KEYBOARD_ReportDesc[63] __ALIGN_END =
   0x95, 0x01,
   0x75, 0x03,
   0x91, 0x01,
-  0x95, 0x06,
-  0x75, 0x08,
-  0x15, 0x00,
-  0x25, 0x65,
   0x05, 0x07,
   0x19, 0x00,
-  0x29, 0x65,
-  0x81, 0x00,
+  0x29, 0xFF,
+  0x15, 0x00,
+  0x25, 0x01,
+  0x75, 0x01,
+  0x95, 0x100 / 8,
+  0x81, 0x02,
+  0xC0
+};
+*/
+
+__ALIGN_BEGIN static uint8_t HID_KEYBOARD_ReportDesc[58] __ALIGN_END =
+{
+  0x05, 0x01,
+  0x09, 0x06,
+  0xA1, 0x01,
+  0x75, 0x01,
+  0x95, 0x08,
+  0x05, 0x07,
+  0x19, 0xE0,
+  0x29, 0xE7,
+  0x15, 0x00,
+  0x25, 0x01,
+  0x81, 0x02,
+  0x95, 0x05,
+  0x75, 0x01,
+  0x05, 0x08,
+  0x19, 0x01,
+  0x29, 0x05,
+  0x91, 0x02,
+  0x95, 0x01,
+  0x75, 0x03,
+  0x91, 0x03,
+  0x96, 0x00,
+  0x01,
+  0x75, 0x01,
+  0x15, 0x00,
+  0x25, 0x01,
+  0x05, 0x07,
+  0x19, 0x00,
+  0x29, 0xFF,
+  0x81, 0x02,
   0xC0
 };
 
@@ -167,7 +203,7 @@ static uint8_t USBD_HID_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
   HIDInEpAdd = USBD_CoreGetEPAdd(pdev, USBD_EP_IN, USBD_EP_TYPE_INTR, (uint8_t)pdev->classId);
 #endif
   pdev->ep_in[HIDInEpAdd & 0xFU].bInterval = (pdev->dev_speed == USBD_SPEED_HIGH) ? HID_HS_BINTERVAL : 0x01;
-  (void)USBD_LL_OpenEP(pdev, HIDInEpAdd, USBD_EP_TYPE_INTR, 0x08);
+  (void)USBD_LL_OpenEP(pdev, HIDInEpAdd, USBD_EP_TYPE_INTR, 0x21);
   pdev->ep_in[HIDInEpAdd & 0xFU].is_used = 1U;
   hhid->state = USBD_HID_IDLE;
   return (uint8_t)USBD_OK;
@@ -222,7 +258,7 @@ static uint8_t USBD_HID_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *re
         case USB_REQ_GET_DESCRIPTOR:
           if((req->wValue >> 8) == HID_REPORT_DESC)
           {
-            len = MIN(63U, req->wLength);
+            len = MIN(58U, req->wLength);
             pbuf = HID_KEYBOARD_ReportDesc;
           }
           else if((req->wValue >> 8) == HID_DESCRIPTOR_TYPE)

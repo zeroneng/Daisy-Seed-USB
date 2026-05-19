@@ -10,7 +10,21 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 }
 
 namespace {
-uint8_t hid_report[8] = {0};
+constexpr int kReportBytes = 33;
+constexpr int kBitmapOffset = 1;
+constexpr int kBitmapBytes = 32;
+uint8_t current_report[kReportBytes]   = {0};
+uint8_t last_sent_report[kReportBytes] = {0};
+
+bool SendIfChanged()
+{
+    if(std::memcmp(current_report, last_sent_report, sizeof(current_report)) == 0)
+        return false;
+
+    USBD_HID_SendReport(&hUsbDeviceHS, current_report, sizeof(current_report));
+    std::memcpy(last_sent_report, current_report, sizeof(current_report));
+    return true;
+}
 }
 
 void UsbHid_Init(void)
@@ -22,15 +36,16 @@ void UsbHid_Init(void)
 
 void UsbHid_SendReport(void)
 {
-    USBD_HID_SendReport(&hUsbDeviceHS, hid_report, sizeof(hid_report));
+    SendIfChanged();
 }
 
 void UsbHid_ClearAllKeys(void)
 {
-    std::memset(hid_report, 0, sizeof(hid_report));
+    std::memset(current_report, 0, sizeof(current_report));
     UsbHid_SendReport();
 }
 
+/* Old boot-style 6-key rollover implementation kept for reference.
 bool UsbHid_KeyOn(uint8_t keycode)
 {
     if(keycode == 0x00)
@@ -77,4 +92,49 @@ bool UsbHid_KeyOff(uint8_t keycode)
         UsbHid_SendReport();
 
     return changed;
+}
+*/
+
+bool UsbHid_KeyOn(uint8_t keycode)
+{
+    if(keycode > 0xE7)
+        return false;
+
+    if(keycode >= 0xE0 && keycode <= 0xE7)
+    {
+        current_report[0] |= static_cast<uint8_t>(1u << (keycode - 0xE0));
+        UsbHid_SendReport();
+        return true;
+    }
+
+    const uint8_t byte_index = static_cast<uint8_t>(keycode >> 3);
+    const uint8_t bit_mask   = static_cast<uint8_t>(1u << (keycode & 0x07u));
+    if(byte_index >= kBitmapBytes)
+        return false;
+
+    current_report[kBitmapOffset + byte_index] |= bit_mask;
+    UsbHid_SendReport();
+    return true;
+}
+
+bool UsbHid_KeyOff(uint8_t keycode)
+{
+    if(keycode > 0xE7)
+        return false;
+
+    if(keycode >= 0xE0 && keycode <= 0xE7)
+    {
+        current_report[0] &= static_cast<uint8_t>(~(1u << (keycode - 0xE0)));
+        UsbHid_SendReport();
+        return true;
+    }
+
+    const uint8_t byte_index = static_cast<uint8_t>(keycode >> 3);
+    const uint8_t bit_mask   = static_cast<uint8_t>(1u << (keycode & 0x07u));
+    if(byte_index >= kBitmapBytes)
+        return false;
+
+    current_report[kBitmapOffset + byte_index] &= static_cast<uint8_t>(~bit_mask);
+    UsbHid_SendReport();
+    return true;
 }
