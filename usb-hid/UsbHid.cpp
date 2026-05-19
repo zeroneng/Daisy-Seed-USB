@@ -12,7 +12,31 @@ namespace {
 #define USB_HID_TEST_MODE 1
 #endif
 
-constexpr uint32_t kChord32_All = 0xFFFFFFFFu; // 32 contiguous keys
+// HID usage codes for:
+// asdfghjkl;'zxcvbnm,./
+constexpr uint8_t kPhraseKeys[] = {
+    0x04, // a
+    0x16, // s
+    0x07, // d
+    0x09, // f
+    0x0A, // g
+    0x0B, // h
+    0x0D, // j
+    0x0E, // k
+    0x0F, // l
+    0x33, // ;
+    0x34, // '
+    0x1D, // z
+    0x1B, // x
+    0x06, // c
+    0x19, // v
+    0x05, // b
+    0x11, // n
+    0x10, // m
+    0x36, // ,
+    0x37, // .
+    0x38  // /
+};
 
 void BlinkOnce(int ms)
 {
@@ -23,22 +47,19 @@ void BlinkOnce(int ms)
 
 void RunNkroStressPattern()
 {
-    // 32-key chord sent as one 32-bit mask over a contiguous key range starting at 'a'
-    UsbHid_SetChord32(0x04, kChord32_All);
+    // Press the whole phrase as one combined report.
+    for(size_t i = 0; i < sizeof(kPhraseKeys); ++i)
+        UsbHid_SetKeyState(kPhraseKeys[i], true);
+    UsbHid_SendReport();
+
     BlinkOnce(500);
     System::Delay(1600);
-    UsbHid_ClearChord32(0x04, kChord32_All);
-    System::Delay(900);
 
-    // Modifier combo: Shift + Ctrl with the same 32-key chord
-    UsbHid_KeyOn(0xE1); // Left Shift
-    UsbHid_KeyOn(0xE0); // Left Ctrl
-    UsbHid_SetChord32(0x04, kChord32_All);
-    BlinkOnce(700);
-    System::Delay(1800);
-    UsbHid_ClearChord32(0x04, kChord32_All);
-    UsbHid_KeyOff(0xE0);
-    UsbHid_KeyOff(0xE1);
+    // Release the whole phrase as one combined report.
+    for(size_t i = 0; i < sizeof(kPhraseKeys); ++i)
+        UsbHid_SetKeyState(kPhraseKeys[i], false);
+    UsbHid_SendReport();
+
     System::Delay(2000);
 }
 } // namespace
