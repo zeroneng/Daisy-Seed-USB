@@ -95,15 +95,18 @@ bool UsbHid_KeyOff(uint8_t keycode)
 }
 */
 
-bool UsbHid_KeyOn(uint8_t keycode)
+bool UsbHid_SetKeyState(uint8_t keycode, bool pressed)
 {
     if(keycode > 0xE7)
         return false;
 
     if(keycode >= 0xE0 && keycode <= 0xE7)
     {
-        current_report[0] |= static_cast<uint8_t>(1u << (keycode - 0xE0));
-        UsbHid_SendReport();
+        const uint8_t bit_mask = static_cast<uint8_t>(1u << (keycode - 0xE0));
+        if(pressed)
+            current_report[0] |= bit_mask;
+        else
+            current_report[0] &= static_cast<uint8_t>(~bit_mask);
         return true;
     }
 
@@ -112,43 +115,39 @@ bool UsbHid_KeyOn(uint8_t keycode)
     if(byte_index >= kBitmapBytes)
         return false;
 
-    current_report[kBitmapOffset + byte_index] |= bit_mask;
-    UsbHid_SendReport();
+    if(pressed)
+        current_report[kBitmapOffset + byte_index] |= bit_mask;
+    else
+        current_report[kBitmapOffset + byte_index] &= static_cast<uint8_t>(~bit_mask);
     return true;
+}
+
+bool UsbHid_KeyOn(uint8_t keycode)
+{
+    const bool ok = UsbHid_SetKeyState(keycode, true);
+    if(ok)
+        UsbHid_SendReport();
+    return ok;
 }
 
 bool UsbHid_KeyOff(uint8_t keycode)
 {
-    if(keycode > 0xE7)
-        return false;
-
-    if(keycode >= 0xE0 && keycode <= 0xE7)
-    {
-        current_report[0] &= static_cast<uint8_t>(~(1u << (keycode - 0xE0)));
+    const bool ok = UsbHid_SetKeyState(keycode, false);
+    if(ok)
         UsbHid_SendReport();
-        return true;
-    }
-
-    const uint8_t byte_index = static_cast<uint8_t>(keycode >> 3);
-    const uint8_t bit_mask   = static_cast<uint8_t>(1u << (keycode & 0x07u));
-    if(byte_index >= kBitmapBytes)
-        return false;
-
-    current_report[kBitmapOffset + byte_index] &= static_cast<uint8_t>(~bit_mask);
-    UsbHid_SendReport();
-    return true;
+    return ok;
 }
 
 void UsbHid_PressKeys(const uint8_t *keys, size_t count)
 {
     for(size_t i = 0; i < count; ++i)
-        UsbHid_KeyOn(keys[i]);
+        UsbHid_SetKeyState(keys[i], true);
 }
 
 void UsbHid_ReleaseKeys(const uint8_t *keys, size_t count)
 {
     for(size_t i = 0; i < count; ++i)
-        UsbHid_KeyOff(keys[i]);
+        UsbHid_SetKeyState(keys[i], false);
 }
 
 void UsbHid_SetChord32(uint8_t start_keycode, uint32_t chord_bits)
