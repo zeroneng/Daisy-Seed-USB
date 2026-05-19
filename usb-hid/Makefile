@@ -5,7 +5,7 @@ SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 
 CPP_SOURCES = \
 UsbHid.cpp \
-usb_hid_helpers.cpp
+HID.cpp
 C_SOURCES += \
 usbd_conf.c \
 usbd_desc.c \

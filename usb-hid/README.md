@@ -8,7 +8,7 @@ HID is the USB class used for devices such as keyboards, mice, and other report-
 ## Main files
 
 - `UsbHid.cpp` — thin sample application shell
-- `usb_hid_helpers.cpp` / `usb_hid_helpers.h` — reusable HID init and key-report helpers
+- `HID.cpp` / `HID.h` — reusable HID init and key-report helpers
 - `usbd_hid_kbd.c` — HID keyboard/report handling code
 - `usbd_conf.c` / `usbd_conf.h` — USB device configuration glue
 - `usbd_desc.c` / `usbd_desc.h` — HID-oriented device descriptors
@@ -117,8 +117,8 @@ A practical starting point for the other project is to keep the reusable HID log
 
 The current reusable helper module in this sample is:
 
-- `usb_hid_helpers.h`
-- `usb_hid_helpers.cpp`
+- `HID.h`
+- `HID.cpp`
 
 Current helper API:
 
@@ -144,7 +144,7 @@ A target project shell can stay very small:
 
 ```cpp
 #include "daisy_seed.h"
-#include "usb_hid_helpers.h"
+#include "HID.h"
 
 using namespace daisy;
 
@@ -174,7 +174,7 @@ int main(void)
 
 ## Integration notes for the current helper-module approach
 
-- Keep the HID logic in `usb_hid_helpers.*` rather than embedding it into the main application file.
+- Keep the HID logic in `HID.*` rather than embedding it into the main application file.
 - Keep `UsbHid.cpp`-style files as thin shells only.
 - The helper module owns:
   - USB HID init
@@ -193,8 +193,8 @@ int main(void)
 
 If the target project is switching into HID mode, the current minimum local file set from this sample is:
 
-- `usb_hid_helpers.cpp`
-- `usb_hid_helpers.h`
+- `HID.cpp`
+- `HID.h`
 - `usbd_conf.c`
 - `usbd_conf.h`
 - `usbd_desc.c`

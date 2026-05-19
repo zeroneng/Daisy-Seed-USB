@@ -1,5 +1,5 @@
 #include "daisy_seed.h"
-#include "usb_hid_helpers.h"
+#include "HID.h"
 
 using namespace daisy;
 
