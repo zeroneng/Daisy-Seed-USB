@@ -109,123 +109,85 @@ void UsbMode_SendHidReport(const uint8_t* data, size_t len);
 The implementation can internally select CDC or HID with compile-time conditionals.
 That keeps the rest of the project from knowing about descriptor files, class registration, or USB stack details.
 
-## Example wrapper skeleton
+## Example integration shape
 
-A practical starting point for the other project could look like this.
+A practical starting point for the other project is to keep the reusable HID logic in its own helper module and keep the application shell thin.
 
-### `usb_mode.h`
+### Reusable HID helper API
+
+The current reusable helper module in this sample is:
+
+- `usb_hid_helpers.h`
+- `usb_hid_helpers.cpp`
+
+Current helper API:
 
 ```c
-#pragma once
-
-#include <stddef.h>
-#include <stdint.h>
-
-void UsbMode_Init(void);
-void UsbMode_Task(void);
-
-int UsbMode_IsCdc(void);
-int UsbMode_IsHid(void);
-
-void UsbMode_SendDebugText(const char* text);
-void UsbMode_SendHidReport(const uint8_t* data, size_t len);
+void UsbHid_Init(void);
+void UsbHid_SendReport(void);
+void UsbHid_ClearAllKeys(void);
+bool UsbHid_KeyOn(uint8_t keycode);
+bool UsbHid_KeyOff(uint8_t keycode);
 ```
 
-### `usb_mode.cpp`
+Recommended usage model:
+
+- import the HID helper module into the target project
+- keep USB descriptor/config/class files alongside it
+- call `UsbHid_Init()` during startup
+- call `UsbHid_KeyOn()` / `UsbHid_KeyOff()` from application logic
+- use `UsbHid_ClearAllKeys()` as a safety reset when needed
+
+### Minimal application shell example
+
+A target project shell can stay very small:
 
 ```cpp
-#include "usb_mode.h"
+#include "daisy_seed.h"
+#include "usb_hid_helpers.h"
 
-#if defined(DEBUG) && DEBUG
-#define USE_USB_CDC 1
-#else
-#define USE_USB_HID 1
-#endif
+using namespace daisy;
 
-#if USE_USB_CDC
-extern "C" {
-// include the project's CDC-facing headers here
-// example:
-// #include "usb_cdc_app.h"
+namespace {
+DaisySeed hw;
 }
-#endif
 
-#if USE_USB_HID
-extern "C" {
-#include "usbd_core.h"
-#include "usbd_desc.h"
-#include "usbd_hid.h"
-extern USBD_HandleTypeDef hUsbDeviceHS;
-}
-#endif
-
-void UsbMode_Init(void)
+int main(void)
 {
-#if USE_USB_CDC
-    // call the project's CDC init path here
-    // example:
-    // UsbCdc_Init();
-#elif USE_USB_HID
-    USBD_Init(&hUsbDeviceHS, &HS_Desc, DEVICE_HS);
-    USBD_RegisterClass(&hUsbDeviceHS, &USBD_HID);
-    USBD_Start(&hUsbDeviceHS);
-#endif
-}
+    hw.Init();
+    UsbHid_Init();
 
-void UsbMode_Task(void)
-{
-    // optional periodic USB servicing hook if the project needs one
-}
+    // Example usage:
+    // System::Delay(1000);
+    // UsbHid_KeyOn(0x04);      // press 'a'
+    // System::Delay(50);
+    // UsbHid_KeyOff(0x04);     // release 'a'
+    // System::Delay(50);
+    // UsbHid_ClearAllKeys();
 
-int UsbMode_IsCdc(void)
-{
-#if USE_USB_CDC
-    return 1;
-#else
-    return 0;
-#endif
-}
-
-int UsbMode_IsHid(void)
-{
-#if USE_USB_HID
-    return 1;
-#else
-    return 0;
-#endif
-}
-
-void UsbMode_SendDebugText(const char* text)
-{
-#if USE_USB_CDC
-    // route debug text through the CDC transmit path
-    // example:
-    // UsbCdc_Write(text);
-#else
-    (void)text;
-#endif
-}
-
-void UsbMode_SendHidReport(const uint8_t* data, size_t len)
-{
-#if USE_USB_HID
-    USBD_HID_SendReport(&hUsbDeviceHS, (uint8_t*)data, (uint16_t)len);
-#else
-    (void)data;
-    (void)len;
-#endif
+    for(;;)
+    {
+        System::Delay(1000);
+    }
 }
 ```
 
-## Integration notes for the wrapper
+## Integration notes for the current helper-module approach
 
-- Only one of `USE_USB_CDC` or `USE_USB_HID` should be active in a given build.
-- Keep the USB mode selection in this wrapper rather than repeating conditionals throughout the application.
-- Let the rest of the project call `UsbMode_*()` functions instead of USB-class-specific functions directly.
-- If the HID build needs helper functions like `Press()` / `Release()`, either:
-  - keep them inside a HID-specific source file and call them from the wrapper, or
-  - expose a small HID-only helper API that stays behind the same compile-time switch.
-- If the CDC build needs serial logging very early at boot, keep that boot-time init path aligned with the same macro policy.
+- Keep the HID logic in `usb_hid_helpers.*` rather than embedding it into the main application file.
+- Keep `UsbHid.cpp`-style files as thin shells only.
+- The helper module owns:
+  - USB HID init
+  - HID report state buffer
+  - raw HID report send path
+  - key on/off helpers
+  - clear-all helper
+- The application shell should own:
+  - board init
+  - app logic
+  - when to call key on/off functions
+- `UsbHid_SendReport()` exists for low-level control, but most integrations should prefer `UsbHid_KeyOn()`, `UsbHid_KeyOff()`, and `UsbHid_ClearAllKeys()`.
+- If the target project still needs CDC in debug builds, keep the USB-mode selection above this layer and compile either the CDC stack or the HID helper path per build.
 
 ## Minimal HID import set
 
