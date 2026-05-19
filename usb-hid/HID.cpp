@@ -138,3 +138,49 @@ bool UsbHid_KeyOff(uint8_t keycode)
     UsbHid_SendReport();
     return true;
 }
+
+void UsbHid_PressKeys(const uint8_t *keys, size_t count)
+{
+    for(size_t i = 0; i < count; ++i)
+        UsbHid_KeyOn(keys[i]);
+}
+
+void UsbHid_ReleaseKeys(const uint8_t *keys, size_t count)
+{
+    for(size_t i = 0; i < count; ++i)
+        UsbHid_KeyOff(keys[i]);
+}
+
+void UsbHid_SetChord32(uint8_t start_keycode, uint32_t chord_bits)
+{
+    for(uint8_t bit = 0; bit < 32; ++bit)
+    {
+        if((chord_bits & (1UL << bit)) == 0)
+            continue;
+        const uint8_t keycode = static_cast<uint8_t>(start_keycode + bit);
+        if(keycode > 0xDF)
+            continue;
+        const uint8_t byte_index = static_cast<uint8_t>(keycode >> 3);
+        const uint8_t bit_mask   = static_cast<uint8_t>(1u << (keycode & 0x07u));
+        if(byte_index < kBitmapBytes)
+            current_report[kBitmapOffset + byte_index] |= bit_mask;
+    }
+    UsbHid_SendReport();
+}
+
+void UsbHid_ClearChord32(uint8_t start_keycode, uint32_t chord_bits)
+{
+    for(uint8_t bit = 0; bit < 32; ++bit)
+    {
+        if((chord_bits & (1UL << bit)) == 0)
+            continue;
+        const uint8_t keycode = static_cast<uint8_t>(start_keycode + bit);
+        if(keycode > 0xDF)
+            continue;
+        const uint8_t byte_index = static_cast<uint8_t>(keycode >> 3);
+        const uint8_t bit_mask   = static_cast<uint8_t>(1u << (keycode & 0x07u));
+        if(byte_index < kBitmapBytes)
+            current_report[kBitmapOffset + byte_index] &= static_cast<uint8_t>(~bit_mask);
+    }
+    UsbHid_SendReport();
+}
