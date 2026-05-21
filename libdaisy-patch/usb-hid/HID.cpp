@@ -10,7 +10,7 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 }
 
 namespace {
-constexpr int kReportBytes = 8;
+constexpr int kReportBytes = 33;
 uint8_t current_report[kReportBytes]   = {0};
 uint8_t last_sent_report[kReportBytes] = {0};
 
@@ -19,29 +19,12 @@ bool SendIfChanged()
     if(std::memcmp(current_report, last_sent_report, sizeof(current_report)) == 0)
         return false;
 
-    USBD_HID_SendReport(&hUsbDeviceHS, current_report, sizeof(current_report));
-    std::memcpy(last_sent_report, current_report, sizeof(current_report));
-    return true;
-}
-
-int FindKeySlot(uint8_t keycode)
-{
-    for(int i = 2; i < 8; ++i)
+    if(USBD_HID_SendReport(&hUsbDeviceHS, current_report, sizeof(current_report)) == USBD_OK)
     {
-        if(current_report[i] == keycode)
-            return i;
+        std::memcpy(last_sent_report, current_report, sizeof(current_report));
+        return true;
     }
-    return -1;
-}
-
-int FindEmptySlot()
-{
-    for(int i = 2; i < 8; ++i)
-    {
-        if(current_report[i] == 0x00)
-            return i;
-    }
-    return -1;
+    return false;
 }
 }
 
@@ -75,17 +58,12 @@ bool UsbHid_KeyOn(uint8_t keycode)
         return true;
     }
 
-    if(FindKeySlot(keycode) >= 0)
-    {
-        UsbHid_SendReport();
-        return true;
-    }
-
-    const int slot = FindEmptySlot();
-    if(slot < 0)
+    const int byte_index = 1 + (keycode >> 3);
+    const uint8_t bit_mask = static_cast<uint8_t>(1u << (keycode & 0x07));
+    if(byte_index < 1 || byte_index >= kReportBytes)
         return false;
 
-    current_report[slot] = keycode;
+    current_report[1 + byte_index] |= bit_mask;
     UsbHid_SendReport();
     return true;
 }
@@ -105,12 +83,13 @@ bool UsbHid_KeyOff(uint8_t keycode)
     }
     else
     {
-        const int slot = FindKeySlot(keycode);
-        if(slot >= 0)
-        {
-            current_report[slot] = 0x00;
-            changed = true;
-        }
+        const int byte_index = 1 + (keycode >> 3);
+        const uint8_t bit_mask = static_cast<uint8_t>(1u << (keycode & 0x07));
+        if(byte_index < 1 || byte_index >= kReportBytes)
+            return false;
+        const uint8_t prev = current_report[1 + byte_index];
+        current_report[1 + byte_index] &= static_cast<uint8_t>(~bit_mask);
+        changed = (prev != current_report[1 + byte_index]);
     }
 
     if(changed)

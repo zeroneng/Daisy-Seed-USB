@@ -5,16 +5,7 @@ using namespace daisy;
 
 namespace {
 DaisySeed hw;
-} // namespace
-
-namespace {
-#ifndef USB_HID_TEST_MODE
-#define USB_HID_TEST_MODE 1
-#endif
-
-constexpr uint8_t kPhraseKeys[] = {
-    0x04, // a
-};
+constexpr uint8_t kKeyA = 0x04;
 
 void BlinkOnce(int ms)
 {
@@ -23,22 +14,15 @@ void BlinkOnce(int ms)
     hw.SetLed(false);
 }
 
-void TapKey(uint8_t keycode)
+void SendATest()
 {
-    UsbHid_KeyOn(keycode);
-    BlinkOnce(60);
-    System::Delay(120);
-    UsbHid_KeyOff(keycode);
-    System::Delay(220);
-}
-
-void RunBootKeyboardTestPattern()
-{
-    for(size_t i = 0; i < sizeof(kPhraseKeys); ++i)
-        TapKey(kPhraseKeys[i]);
-
-    UsbHid_ClearAllKeys();
-    System::Delay(2000);
+    UsbHid_SetKeyState(kKeyA, true);
+    UsbHid_SendReport();
+    BlinkOnce(80);
+    System::Delay(200);
+    UsbHid_SetKeyState(kKeyA, false);
+    UsbHid_SendReport();
+    System::Delay(800);
 }
 } // namespace
 
@@ -52,13 +36,6 @@ int main(void)
 
     for(;;)
     {
-#if USB_HID_TEST_MODE
-        RunBootKeyboardTestPattern();
-#else
-        hw.SetLed(true);
-        System::Delay(500);
-        hw.SetLed(false);
-        System::Delay(500);
-#endif
+        SendATest();
     }
 }

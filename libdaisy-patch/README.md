@@ -92,3 +92,18 @@ The final workflow verified:
 
 Do not stop at enumeration.
 Always verify actual host-side HID input events when possible.
+
+## Current NKRO test state
+
+The current project tree is set up to:
+- attempt NKRO keyboard reports
+- send the letter `a` once every second
+- blink the device LED when it sends
+
+Validation status on the Pi host:
+- build/flash/verify succeed
+- enumeration succeeds
+- no fresh USB error spam
+- host-side NKRO key input is still **not yet confirmed**
+
+This means the current packaged state is a good manual-validation build for comparing device behavior on another host.

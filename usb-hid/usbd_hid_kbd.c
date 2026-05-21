@@ -12,7 +12,7 @@ static uint8_t *USBD_HID_GetOtherSpeedCfgDesc(uint16_t *length);
 static uint8_t *USBD_HID_GetDeviceQualifierDesc(uint16_t *length);
 #endif
 
-#define HID_KEYBOARD_REPORT_DESC_SIZE 63U
+#define HID_KEYBOARD_REPORT_DESC_SIZE 58U
 
 USBD_ClassTypeDef USBD_HID =
 {
@@ -73,7 +73,7 @@ __ALIGN_BEGIN static uint8_t USBD_HID_CfgDesc[USB_HID_CONFIG_DESC_SIZ] __ALIGN_E
   0x00,
   0x01,
   0x22,
-  HID_KEYBOARD_REPORT_DESC_SIZE,
+  0x3A,
   0x00,
 
   0x07,
@@ -95,7 +95,7 @@ __ALIGN_BEGIN static uint8_t USBD_HID_Desc[USB_HID_DESC_SIZ] __ALIGN_END =
   0x00,
   0x01,
   0x22,
-  HID_KEYBOARD_REPORT_DESC_SIZE,
+  0x3A,
   0x00,
 };
 
@@ -120,17 +120,14 @@ __ALIGN_BEGIN static uint8_t HID_KEYBOARD_ReportDesc[HID_KEYBOARD_REPORT_DESC_SI
   0x05, 0x01,
   0x09, 0x06,
   0xA1, 0x01,
+  0x75, 0x01,
+  0x95, 0x08,
   0x05, 0x07,
   0x19, 0xE0,
   0x29, 0xE7,
   0x15, 0x00,
   0x25, 0x01,
-  0x75, 0x01,
-  0x95, 0x08,
   0x81, 0x02,
-  0x95, 0x01,
-  0x75, 0x08,
-  0x81, 0x01,
   0x95, 0x05,
   0x75, 0x01,
   0x05, 0x08,
@@ -139,15 +136,16 @@ __ALIGN_BEGIN static uint8_t HID_KEYBOARD_ReportDesc[HID_KEYBOARD_REPORT_DESC_SI
   0x91, 0x02,
   0x95, 0x01,
   0x75, 0x03,
-  0x91, 0x01,
-  0x95, 0x06,
-  0x75, 0x08,
+  0x91, 0x03,
+  0x96, 0x00,
+  0x01,
+  0x75, 0x01,
   0x15, 0x00,
-  0x25, 0x65,
+  0x25, 0x01,
   0x05, 0x07,
   0x19, 0x00,
-  0x29, 0x65,
-  0x81, 0x00,
+  0x29, 0xFF,
+  0x81, 0x02,
   0xC0
 };
 
@@ -242,7 +240,7 @@ static uint8_t USBD_HID_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *re
         case USB_REQ_GET_DESCRIPTOR:
           if((req->wValue >> 8) == HID_REPORT_DESC)
           {
-            len = MIN(HID_KEYBOARD_REPORT_DESC_SIZE, req->wLength);
+            len = MIN(58U, req->wLength);
             pbuf = HID_KEYBOARD_ReportDesc;
           }
           else if((req->wValue >> 8) == HID_DESCRIPTOR_TYPE)
@@ -283,6 +281,9 @@ static uint8_t USBD_HID_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *re
           }
           break;
 
+        case USB_REQ_CLEAR_FEATURE:
+          break;
+
         default:
           USBD_CtlError(pdev, req);
           ret = USBD_FAIL;
@@ -301,7 +302,7 @@ static uint8_t USBD_HID_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *re
 static uint8_t USBD_HID_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
 {
   UNUSED(epnum);
-  if((pdev->pClassData != NULL) && ((epnum & 0x7FU) == (HIDInEpAdd & 0x7FU)))
+  if(pdev->pClassData != NULL)
   {
     ((USBD_HID_HandleTypeDef *)pdev->pClassData)->state = USBD_HID_IDLE;
   }
@@ -311,18 +312,21 @@ static uint8_t USBD_HID_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
 #ifndef USE_USBD_COMPOSITE
 static uint8_t *USBD_HID_GetFSCfgDesc(uint16_t *length)
 {
+  USBD_HID_CfgDesc[33] = 0x01;
   *length = (uint16_t)sizeof(USBD_HID_CfgDesc);
   return USBD_HID_CfgDesc;
 }
 
 static uint8_t *USBD_HID_GetHSCfgDesc(uint16_t *length)
 {
+  USBD_HID_CfgDesc[33] = HID_HS_BINTERVAL;
   *length = (uint16_t)sizeof(USBD_HID_CfgDesc);
   return USBD_HID_CfgDesc;
 }
 
 static uint8_t *USBD_HID_GetOtherSpeedCfgDesc(uint16_t *length)
 {
+  USBD_HID_CfgDesc[33] = 0x01;
   *length = (uint16_t)sizeof(USBD_HID_CfgDesc);
   return USBD_HID_CfgDesc;
 }
@@ -337,13 +341,14 @@ static uint8_t *USBD_HID_GetDeviceQualifierDesc(uint16_t *length)
 uint8_t USBD_HID_SendReport(USBD_HandleTypeDef *pdev, uint8_t *report, uint16_t len)
 {
   USBD_HID_HandleTypeDef *hhid = (USBD_HID_HandleTypeDef *)pdev->pClassData;
-  if((pdev->dev_state == USBD_STATE_CONFIGURED) && (hhid != NULL) && (hhid->state == USBD_HID_IDLE))
+  if(hhid == NULL)
+    return (uint8_t)USBD_FAIL;
+  if(pdev->dev_state == USBD_STATE_CONFIGURED)
   {
-    hhid->state = USBD_HID_BUSY;
-    if(USBD_LL_Transmit(pdev, HIDInEpAdd, report, len) != USBD_OK)
+    if(hhid->state == USBD_HID_IDLE)
     {
-      hhid->state = USBD_HID_IDLE;
-      return (uint8_t)USBD_FAIL;
+      hhid->state = USBD_HID_BUSY;
+      (void)USBD_LL_Transmit(pdev, HIDInEpAdd, report, len);
     }
   }
   return (uint8_t)USBD_OK;

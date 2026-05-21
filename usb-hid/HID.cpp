@@ -10,7 +10,9 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 }
 
 namespace {
-constexpr int kReportBytes = 8;
+constexpr int kReportBytes = 33;
+constexpr int kBitmapOffset = 1;
+constexpr int kBitmapBytes = 32;
 uint8_t current_report[kReportBytes]   = {0};
 uint8_t last_sent_report[kReportBytes] = {0};
 
@@ -22,26 +24,6 @@ bool SendIfChanged()
     USBD_HID_SendReport(&hUsbDeviceHS, current_report, sizeof(current_report));
     std::memcpy(last_sent_report, current_report, sizeof(current_report));
     return true;
-}
-
-int FindKeySlot(uint8_t keycode)
-{
-    for(int i = 2; i < 8; ++i)
-    {
-        if(current_report[i] == keycode)
-            return i;
-    }
-    return -1;
-}
-
-int FindEmptySlot()
-{
-    for(int i = 2; i < 8; ++i)
-    {
-        if(current_report[i] == 0x00)
-            return i;
-    }
-    return -1;
 }
 }
 
@@ -63,31 +45,32 @@ void UsbHid_ClearAllKeys(void)
     UsbHid_SendReport();
 }
 
+/* Old boot-style 6-key rollover implementation kept for reference.
 bool UsbHid_KeyOn(uint8_t keycode)
 {
     if(keycode == 0x00)
         return false;
 
-    if(keycode >= 0xE0 && keycode <= 0xE7)
+    for(int i = 2; i < 8; ++i)
     {
-        current_report[0] |= static_cast<uint8_t>(1u << (keycode - 0xE0));
-        UsbHid_SendReport();
-        return true;
+        if(hid_report[i] == keycode)
+        {
+            UsbHid_SendReport();
+            return true;
+        }
     }
 
-    if(FindKeySlot(keycode) >= 0)
+    for(int i = 2; i < 8; ++i)
     {
-        UsbHid_SendReport();
-        return true;
+        if(hid_report[i] == 0x00)
+        {
+            hid_report[i] = keycode;
+            UsbHid_SendReport();
+            return true;
+        }
     }
 
-    const int slot = FindEmptySlot();
-    if(slot < 0)
-        return false;
-
-    current_report[slot] = keycode;
-    UsbHid_SendReport();
-    return true;
+    return false;
 }
 
 bool UsbHid_KeyOff(uint8_t keycode)
@@ -96,24 +79,63 @@ bool UsbHid_KeyOff(uint8_t keycode)
         return false;
 
     bool changed = false;
-    if(keycode >= 0xE0 && keycode <= 0xE7)
+    for(int i = 2; i < 8; ++i)
     {
-        const uint8_t mask = static_cast<uint8_t>(1u << (keycode - 0xE0));
-        const uint8_t prev = current_report[0];
-        current_report[0] &= static_cast<uint8_t>(~mask);
-        changed = (prev != current_report[0]);
-    }
-    else
-    {
-        const int slot = FindKeySlot(keycode);
-        if(slot >= 0)
+        if(hid_report[i] == keycode)
         {
-            current_report[slot] = 0x00;
-            changed = true;
+            hid_report[i] = 0x00;
+            changed       = true;
         }
     }
 
     if(changed)
         UsbHid_SendReport();
+
     return changed;
 }
+*/
+
+bool UsbHid_SetKeyState(uint8_t keycode, bool pressed)
+{
+    if(keycode > 0xE7)
+        return false;
+
+    if(keycode >= 0xE0 && keycode <= 0xE7)
+    {
+        const uint8_t bit_mask = static_cast<uint8_t>(1u << (keycode - 0xE0));
+        if(pressed)
+            current_report[0] |= bit_mask;
+        else
+            current_report[0] &= static_cast<uint8_t>(~bit_mask);
+        return true;
+    }
+
+    const uint8_t byte_index = static_cast<uint8_t>(keycode >> 3);
+    const uint8_t bit_mask   = static_cast<uint8_t>(1u << (keycode & 0x07u));
+    if(byte_index >= kBitmapBytes)
+        return false;
+
+    if(pressed)
+        current_report[kBitmapOffset + byte_index] |= bit_mask;
+    else
+        current_report[kBitmapOffset + byte_index] &= static_cast<uint8_t>(~bit_mask);
+    return true;
+}
+
+bool UsbHid_KeyOn(uint8_t keycode)
+{
+    const bool ok = UsbHid_SetKeyState(keycode, true);
+    if(ok)
+        UsbHid_SendReport();
+    return ok;
+}
+
+bool UsbHid_KeyOff(uint8_t keycode)
+{
+    const bool ok = UsbHid_SetKeyState(keycode, false);
+    if(ok)
+        UsbHid_SendReport();
+    return ok;
+}
+
+
