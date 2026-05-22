@@ -16,8 +16,8 @@
 #include "usbd_def.h"
 #include "usbd_core.h"
 
-USBD_HandleTypeDef hUsbDeviceHS;
-USBD_HandleTypeDef hUsbDeviceFS;
+extern USBD_HandleTypeDef hUsbDeviceHS;
+extern USBD_HandleTypeDef hUsbDeviceFS;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 PCD_HandleTypeDef hpcd_USB_OTG_HS;

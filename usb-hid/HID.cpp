@@ -138,4 +138,39 @@ bool UsbHid_KeyOff(uint8_t keycode)
     return ok;
 }
 
+uint8_t UsbHid_CharToKeycode(char c)
+{
+    if(c >= 'a' && c <= 'z')
+        return static_cast<uint8_t>(0x04 + (c - 'a'));
+
+    if(c >= 'A' && c <= 'Z')
+        return static_cast<uint8_t>(0x04 + (c - 'A'));
+
+    if(c >= '1' && c <= '9')
+        return static_cast<uint8_t>(0x1E + (c - '1'));
+
+    switch(c)
+    {
+        case '0': return 0x27;
+        case '\n': return 0x28;
+        case '\r': return 0x28;
+        case 0x1B: return 0x29;
+        case '\b': return 0x2A;
+        case '\t': return 0x2B;
+        case ' ': return 0x2C;
+        case '-': return 0x2D;
+        case '=': return 0x2E;
+        case '[': return 0x2F;
+        case ']': return 0x30;
+        case '\\': return 0x31;
+        case ';': return 0x33;
+        case '\'': return 0x34;
+        case '`': return 0x35;
+        case ',': return 0x36;
+        case '.': return 0x37;
+        case '/': return 0x38;
+        default: return 0x00;
+    }
+}
+
 

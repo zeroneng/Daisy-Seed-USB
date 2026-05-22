@@ -5,7 +5,7 @@ using namespace daisy;
 
 namespace {
 DaisySeed hw;
-constexpr uint8_t kKeyA = 0x04;
+constexpr char kTestChar = 'a';
 
 void BlinkOnce(int ms)
 {
@@ -16,11 +16,15 @@ void BlinkOnce(int ms)
 
 void SendATest()
 {
-    UsbHid_SetKeyState(kKeyA, true);
+    const uint8_t keycode = UsbHid_CharToKeycode(kTestChar);
+    if(keycode == 0x00)
+        return;
+
+    UsbHid_SetKeyState(keycode, true);
     UsbHid_SendReport();
     BlinkOnce(80);
     System::Delay(200);
-    UsbHid_SetKeyState(kKeyA, false);
+    UsbHid_SetKeyState(keycode, false);
     UsbHid_SendReport();
     System::Delay(800);
 }

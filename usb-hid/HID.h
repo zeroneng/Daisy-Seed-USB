@@ -26,4 +26,8 @@ bool UsbHid_KeyOn(uint8_t keycode);
 // Use for simple/manual tests. For matrix scanning, prefer UsbHid_SetKeyState().
 bool UsbHid_KeyOff(uint8_t keycode);
 
+// Convert a human-readable ASCII character to a HID usage code.
+// Returns 0 when no direct mapping is available.
+uint8_t UsbHid_CharToKeycode(char c);
+
 
