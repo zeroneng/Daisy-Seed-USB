@@ -162,17 +162,15 @@ extern "C"
     //
     // Projects with their own full-speed USB device stack can disable these
     // default FS interrupt handlers and provide local replacements instead.
-#ifndef LIBDAISY_DISABLE_FS_USB_IRQ_HANDLERS
-    void OTG_FS_EP1_OUT_IRQHandler(void)
+    __attribute__((weak)) void OTG_FS_EP1_OUT_IRQHandler(void)
     {
         HAL_PCD_IRQHandler(&hpcd_USB_OTG_FS);
     }
 
-    void OTG_FS_EP1_IN_IRQHandler(void)
+    __attribute__((weak)) void OTG_FS_EP1_IN_IRQHandler(void)
     {
         HAL_PCD_IRQHandler(&hpcd_USB_OTG_FS);
     }
 
-    void OTG_FS_IRQHandler(void) { HAL_PCD_IRQHandler(&hpcd_USB_OTG_FS); }
-#endif
+    __attribute__((weak)) void OTG_FS_IRQHandler(void) { HAL_PCD_IRQHandler(&hpcd_USB_OTG_FS); }
 }

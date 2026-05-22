@@ -12,3 +12,7 @@ Purpose:
 Important:
 - the actual `usb-hid` project files belong in `daisy-usb/usb-hid/`
 - they should not be duplicated here
+
+## Current recommendation
+
+The current preferred libDaisy-side fix is to make the default FS USB IRQ handlers in `src/hid/usb.cpp` weak, while leaving `hUsbDeviceHS` and `hUsbDeviceFS` owned by libDaisy. Projects with custom HID USB stacks can then provide strong local IRQ handlers and declare the USB device handles as `extern` instead of redefining them.
