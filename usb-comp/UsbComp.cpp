@@ -11,7 +11,11 @@ extern "C" {
 #include "usbd_hid.h"
 #include "usb_comp_cdc_if.h"
 extern USBD_HandleTypeDef hUsbDeviceHS;
+extern USBD_ClassTypeDef USBD_CMPSIT;
 uint32_t USBD_CMPSIT_SetClassID(USBD_HandleTypeDef *pdev,
+                                USBD_CompositeClassTypeDef Class,
+                                uint32_t Instance);
+uint32_t USBD_CMPSIT_GetClassID(USBD_HandleTypeDef *pdev,
                                 USBD_CompositeClassTypeDef Class,
                                 uint32_t Instance);
 }
@@ -20,16 +24,18 @@ DaisySeed hw;
 static uint8_t hid_report[4] = {0, 0, 0, 0};
 static uint32_t hid_class_id = 0;
 static uint32_t cdc_class_id = 0;
+static uint8_t hid_ep_addr[] = {0x81U};
+static uint8_t cdc_ep_addr[] = {0x82U, 0x02U, 0x83U};
 
 static void InitUSBComposite(void)
 {
     USBD_Init(&hUsbDeviceHS, &HS_Desc, DEVICE_HS);
 
-    hid_class_id = USBD_CMPSIT_SetClassID(&hUsbDeviceHS, CLASS_TYPE_HID, 0);
-    USBD_RegisterClass(&hUsbDeviceHS, USBD_HID_CLASS);
+    USBD_RegisterClassComposite(&hUsbDeviceHS, USBD_HID_CLASS, CLASS_TYPE_HID, hid_ep_addr);
+    USBD_RegisterClassComposite(&hUsbDeviceHS, USBD_CDC_CLASS, CLASS_TYPE_CDC, cdc_ep_addr);
 
+    hid_class_id = USBD_CMPSIT_GetClassID(&hUsbDeviceHS, CLASS_TYPE_HID, 0);
     cdc_class_id = USBD_CMPSIT_SetClassID(&hUsbDeviceHS, CLASS_TYPE_CDC, 0);
-    USBD_RegisterClass(&hUsbDeviceHS, USBD_CDC_CLASS);
     USB_COMP_CDC_SetClassId((uint8_t)cdc_class_id);
     USBD_CDC_RegisterInterface(&hUsbDeviceHS, &USB_COMP_CDC_Interface_fops_HS);
 

@@ -3,7 +3,7 @@
 #include <string.h>
 
 #define HAUDIO  ((USBD_AUDIO_HandleTypeDef *)pdev->pClassData)
-#define ITFOPS  ((USBD_AUDIO_ItfTypeDef    *)pdev->pUserData[0])
+#define ITFOPS  ((USBD_AUDIO_ItfTypeDef    *)pdev->pUserData)
 
 static uint8_t  USBD_AUDIO_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx);
 static uint8_t  USBD_AUDIO_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx);
@@ -326,6 +326,6 @@ uint8_t USBD_AUDIO_RegisterInterface(USBD_HandleTypeDef *pdev,
 {
     if(fops == NULL)
         return USBD_FAIL;
-    pdev->pUserData[0] = fops;
+    pdev->pUserData = fops;
     return USBD_OK;
 }

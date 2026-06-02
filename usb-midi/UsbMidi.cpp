@@ -1,29 +1,11 @@
 #include "daisy_seed.h"
-extern "C" {
-#include "usbh_midi.h"
-}
 
 using namespace daisy;
 
 DaisySeed      hw;
-USBHostHandle  usb_host;
 MidiUsbHandler midi;
 
-static bool class_ready = false;
 static bool led_state   = false;
-
-static void OnUsbClassActive(void* userdata)
-{
-    (void)userdata;
-    class_ready = true;
-}
-
-static void OnUsbDisconnect(void* userdata)
-{
-    (void)userdata;
-    class_ready = false;
-    led_state   = false;
-}
 
 int main(void)
 {
@@ -31,14 +13,8 @@ int main(void)
     hw.Init();
     hw.SetLed(false);
 
-    USBHostHandle::Config usbh_cfg;
-    usbh_cfg.class_active_callback = OnUsbClassActive;
-    usbh_cfg.disconnect_callback   = OnUsbDisconnect;
-    usb_host.Init(usbh_cfg);
-    usb_host.RegisterClass(USBH_MIDI_CLASS);
-
     MidiUsbHandler::Config midi_cfg;
-    midi_cfg.transport_config.periph = MidiUsbTransport::Config::HOST;
+    midi_cfg.transport_config.periph = MidiUsbTransport::Config::INTERNAL;
     midi.Init(midi_cfg);
 
     uint32_t last_tx = 0;
@@ -46,7 +22,6 @@ int main(void)
 
     while(1)
     {
-        usb_host.Process();
         midi.Listen();
 
         while(midi.HasEvents())
@@ -72,7 +47,7 @@ int main(void)
             }
         }
 
-        if(class_ready && System::GetNow() - last_tx > 1000)
+        if(System::GetNow() - last_tx > 1000)
         {
             last_tx = System::GetNow();
             if(note_on)

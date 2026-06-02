@@ -3,8 +3,8 @@
 #include <string.h>
 
 #define HAUDIO  ((USBD_AUDIO_HandleTypeDef *)pdev->pClassData)
-#define ITFOPS  ((USBD_AUDIO_ItfTypeDef    *)pdev->pUserData[0])
-#define AC_TOTAL_LEN 0x2EU
+#define ITFOPS  ((USBD_AUDIO_ItfTypeDef    *)pdev->pUserData)
+#define AC_TOTAL_LEN 0x34U
 
 static uint8_t  USBD_AUDIO_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx);
 static uint8_t  USBD_AUDIO_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx);
@@ -41,7 +41,7 @@ __ALIGN_BEGIN static uint8_t USBD_AUDIO_CfgDesc[USB_AUDIO_CONFIG_DESC_SIZ] __ALI
     USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOCONTROL, AUDIO_PROTOCOL_UNDEFINED, 0x00,
 
     /* AC header: two streaming interfaces */
-    0x09, AUDIO_INTERFACE_DESCRIPTOR_TYPE, AUDIO_CONTROL_HEADER,
+    0x0A, AUDIO_INTERFACE_DESCRIPTOR_TYPE, AUDIO_CONTROL_HEADER,
     0x00, 0x01,
     LOBYTE(AC_TOTAL_LEN), HIBYTE(AC_TOTAL_LEN),
     0x02,
@@ -435,6 +435,6 @@ uint8_t USBD_AUDIO_RegisterInterface(USBD_HandleTypeDef *pdev, USBD_AUDIO_ItfTyp
 {
     if(fops == NULL)
         return USBD_FAIL;
-    pdev->pUserData[0] = fops;
+    pdev->pUserData = fops;
     return USBD_OK;
 }

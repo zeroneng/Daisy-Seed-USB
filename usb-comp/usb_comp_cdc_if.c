@@ -6,6 +6,8 @@
 
 uint8_t UserRxBufferHS[APP_RX_DATA_SIZE];
 uint8_t UserTxBufferHS[APP_TX_DATA_SIZE];
+uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
+uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 extern USBD_HandleTypeDef hUsbDeviceHS;
 
@@ -23,6 +25,22 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length);
 static int8_t CDC_Receive_HS_Int(uint8_t* pbuf, uint32_t* Len);
 
 USBD_CDC_ItfTypeDef USB_COMP_CDC_Interface_fops_HS = {
+    CDC_Init_HS,
+    CDC_DeInit_HS,
+    CDC_Control_HS,
+    CDC_Receive_HS_Int,
+    NULL,
+};
+
+USBD_CDC_ItfTypeDef USBD_Interface_fops_HS = {
+    CDC_Init_HS,
+    CDC_DeInit_HS,
+    CDC_Control_HS,
+    CDC_Receive_HS_Int,
+    NULL,
+};
+
+USBD_CDC_ItfTypeDef USBD_Interface_fops_FS = {
     CDC_Init_HS,
     CDC_DeInit_HS,
     CDC_Control_HS,
@@ -89,4 +107,14 @@ uint8_t CDC_Transmit_HS(uint8_t* Buf, uint16_t Len)
         return USBD_BUSY;
     USBD_CDC_SetTxBuffer(&hUsbDeviceHS, Buf, Len, cdc_class_id_hs);
     return USBD_CDC_TransmitPacket(&hUsbDeviceHS, cdc_class_id_hs);
+}
+
+void CDC_Set_Rx_Callback_FS(CDC_ReceiveCallback cb)
+{
+    CDC_Set_Rx_Callback_HS(cb);
+}
+
+uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
+{
+    return CDC_Transmit_HS(Buf, Len);
 }

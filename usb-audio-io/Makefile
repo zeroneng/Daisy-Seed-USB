@@ -1,7 +1,6 @@
 TARGET = UsbAudio
 
 LIBDAISY_DIR = ../../libDaisy
-SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 
 CPP_SOURCES = UsbAudio.cpp
 C_SOURCES += \
@@ -12,4 +11,4 @@ usbd_desc.c
 
 USE_FATFS = 0
 
-include $(SYSTEM_FILES_DIR)/Makefile
+include ../daisy_standalone.mk
