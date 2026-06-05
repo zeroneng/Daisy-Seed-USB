@@ -93,6 +93,7 @@ static int8_t SCSI_ModeSense6(USBD_HandleTypeDef *pdev, uint8_t lun, uint8_t *pa
 static int8_t SCSI_ModeSense10(USBD_HandleTypeDef *pdev, uint8_t lun, uint8_t *params);
 static int8_t SCSI_Write10(USBD_HandleTypeDef *pdev, uint8_t lun, uint8_t *params);
 static int8_t SCSI_Write12(USBD_HandleTypeDef *pdev, uint8_t lun, uint8_t *params);
+static int8_t SCSI_SynchronizeCache(USBD_HandleTypeDef *pdev, uint8_t lun, uint8_t *params);
 static int8_t SCSI_Read10(USBD_HandleTypeDef *pdev, uint8_t lun, uint8_t *params);
 static int8_t SCSI_Read12(USBD_HandleTypeDef *pdev, uint8_t lun, uint8_t *params);
 static int8_t SCSI_Verify10(USBD_HandleTypeDef *pdev, uint8_t lun, uint8_t *params);
@@ -150,6 +151,11 @@ int8_t SCSI_ProcessCmd(USBD_HandleTypeDef *pdev, uint8_t lun, uint8_t *cmd)
 
     case SCSI_START_STOP_UNIT:
       ret = SCSI_StartStopUnit(pdev, lun, cmd);
+      break;
+
+    case SCSI_SYNCHRONIZE_CACHE10:
+    case SCSI_SYNCHRONIZE_CACHE16:
+      ret = SCSI_SynchronizeCache(pdev, lun, cmd);
       break;
 
     case SCSI_ALLOW_MEDIUM_REMOVAL:
@@ -840,6 +846,29 @@ static int8_t SCSI_AllowPreventRemovable(USBD_HandleTypeDef *pdev, uint8_t lun, 
 
   hmsc->bot_data_length = 0U;
 
+  return 0;
+}
+
+/**
+  * @brief  SCSI_SynchronizeCache
+  *         Process Synchronize Cache commands. The block backend commits writes
+  *         synchronously, so there is no deferred cache to flush.
+  * @param  lun: Logical unit number
+  * @param  params: Command parameters
+  * @retval status
+  */
+static int8_t SCSI_SynchronizeCache(USBD_HandleTypeDef *pdev, uint8_t lun, uint8_t *params)
+{
+  UNUSED(lun);
+  UNUSED(params);
+  USBD_MSC_BOT_HandleTypeDef *hmsc = (USBD_MSC_BOT_HandleTypeDef *)pdev->pClassDataCmsit[pdev->classId];
+
+  if (hmsc == NULL)
+  {
+    return -1;
+  }
+
+  hmsc->bot_data_length = 0U;
   return 0;
 }
 
@@ -1540,4 +1569,3 @@ static int8_t SCSI_UpdateBotData(USBD_MSC_BOT_HandleTypeDef *hmsc,
 /**
   * @}
   */
-
