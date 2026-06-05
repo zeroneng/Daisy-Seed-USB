@@ -157,10 +157,19 @@ static uint8_t USBD_HID_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
   USBD_HID_HandleTypeDef *hhid = (USBD_HID_HandleTypeDef *)USBD_malloc(sizeof(USBD_HID_HandleTypeDef));
   if(hhid == NULL)
   {
+#ifdef USE_USBD_COMPOSITE
+    pdev->pClassDataCmsit[pdev->classId] = NULL;
+#else
     pdev->pClassData = NULL;
+#endif
     return (uint8_t)USBD_FAIL;
   }
+#ifdef USE_USBD_COMPOSITE
+  pdev->pClassDataCmsit[pdev->classId] = (void *)hhid;
+  HIDInEpAdd = USBD_CoreGetEPAdd(pdev, USBD_EP_IN, USBD_EP_TYPE_INTR, (uint8_t)pdev->classId);
+#else
   pdev->pClassData = (void *)hhid;
+#endif
   (void)USBD_LL_OpenEP(pdev, HIDInEpAdd, USBD_EP_TYPE_INTR, HID_EPIN_SIZE);
   pdev->ep_in[HIDInEpAdd & 0xFU].is_used = 1U;
   hhid->state = USBD_HID_IDLE;
@@ -173,19 +182,34 @@ static uint8_t USBD_HID_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 static uint8_t USBD_HID_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 {
   UNUSED(cfgidx);
+#ifdef USE_USBD_COMPOSITE
+  HIDInEpAdd = USBD_CoreGetEPAdd(pdev, USBD_EP_IN, USBD_EP_TYPE_INTR, (uint8_t)pdev->classId);
+#endif
   (void)USBD_LL_CloseEP(pdev, HIDInEpAdd);
   pdev->ep_in[HIDInEpAdd & 0xFU].is_used = 0U;
+#ifdef USE_USBD_COMPOSITE
+  if(pdev->pClassDataCmsit[pdev->classId] != NULL)
+  {
+    (void)USBD_free(pdev->pClassDataCmsit[pdev->classId]);
+    pdev->pClassDataCmsit[pdev->classId] = NULL;
+  }
+#else
   if(pdev->pClassData != NULL)
   {
     (void)USBD_free(pdev->pClassData);
     pdev->pClassData = NULL;
   }
+#endif
   return (uint8_t)USBD_OK;
 }
 
 static uint8_t USBD_HID_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 {
+#ifdef USE_USBD_COMPOSITE
+  USBD_HID_HandleTypeDef *hhid = (USBD_HID_HandleTypeDef *)pdev->pClassDataCmsit[pdev->classId];
+#else
   USBD_HID_HandleTypeDef *hhid = (USBD_HID_HandleTypeDef *)pdev->pClassData;
+#endif
   USBD_StatusTypeDef ret = USBD_OK;
   uint16_t len = 0U;
   uint8_t *pbuf = NULL;
@@ -302,10 +326,17 @@ static uint8_t USBD_HID_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *re
 static uint8_t USBD_HID_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
 {
   UNUSED(epnum);
+#ifdef USE_USBD_COMPOSITE
+  if(pdev->pClassDataCmsit[pdev->classId] != NULL)
+  {
+    ((USBD_HID_HandleTypeDef *)pdev->pClassDataCmsit[pdev->classId])->state = USBD_HID_IDLE;
+  }
+#else
   if(pdev->pClassData != NULL)
   {
     ((USBD_HID_HandleTypeDef *)pdev->pClassData)->state = USBD_HID_IDLE;
   }
+#endif
   return (uint8_t)USBD_OK;
 }
 
@@ -338,9 +369,16 @@ static uint8_t *USBD_HID_GetDeviceQualifierDesc(uint16_t *length)
 }
 #endif
 
+#ifdef USE_USBD_COMPOSITE
+uint8_t USBD_HID_SendReport(USBD_HandleTypeDef *pdev, uint8_t *report, uint16_t len, uint8_t ClassId)
+{
+  USBD_HID_HandleTypeDef *hhid = (USBD_HID_HandleTypeDef *)pdev->pClassDataCmsit[ClassId];
+  HIDInEpAdd = USBD_CoreGetEPAdd(pdev, USBD_EP_IN, USBD_EP_TYPE_INTR, ClassId);
+#else
 uint8_t USBD_HID_SendReport(USBD_HandleTypeDef *pdev, uint8_t *report, uint16_t len)
 {
   USBD_HID_HandleTypeDef *hhid = (USBD_HID_HandleTypeDef *)pdev->pClassData;
+#endif
   if(hhid == NULL)
     return (uint8_t)USBD_FAIL;
   if(pdev->dev_state == USBD_STATE_CONFIGURED)

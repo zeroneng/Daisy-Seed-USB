@@ -210,9 +210,11 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
                                                            0xC0 words = 768 B gives 2-packet headroom)
            Total used = 0x80 + 0x40 + 0xC0 = 0x140 = 320 words ✓
         */
-        HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x80);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x40);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0xC0);
+        HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x70);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x20);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0x20);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 2, 0x40);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 3, 0x10);
     }
 
     if(pdev->id == DEVICE_HS)
@@ -235,9 +237,11 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
 
         if(HAL_PCD_Init(&hpcd_USB_OTG_HS) != HAL_OK) { Error_Handler(); }
 
-        HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_HS, 0x200);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 0, 0x80);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 1, 0x174);
+        HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_HS, 0x80);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 0, 0x40);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 1, 0x40);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 2, 0x40);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 3, 0x20);
     }
 
     return USBD_OK;
