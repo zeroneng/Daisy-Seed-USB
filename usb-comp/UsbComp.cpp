@@ -29,6 +29,14 @@ using namespace daisy;
 #define USB_COMP_TEST_AUDIO 1
 #endif
 
+#ifndef USB_COMP_ENABLE_MIDI
+#define USB_COMP_ENABLE_MIDI 1
+#endif
+
+#ifndef USB_COMP_TEST_MIDI
+#define USB_COMP_TEST_MIDI 1
+#endif
+
 extern "C" {
 #include "usbd_core.h"
 #include "usbd_desc.h"
@@ -47,6 +55,10 @@ extern "C" {
 #include "audio_fifo_shared.h"
 #include "usbd_audio.h"
 #include "usbd_audio_if.h"
+#endif
+
+#if USB_COMP_ENABLE_MIDI
+#include "usbd_midi.h"
 #endif
 
 extern USBD_HandleTypeDef hUsbDeviceHS;
@@ -68,6 +80,10 @@ DaisySeed hw;
 
 constexpr uint8_t kNoClass = 0xFFU;
 
+#ifndef DSY_RAM_D2
+#define DSY_RAM_D2 __attribute__((section(".heap")))
+#endif
+
 #if USB_COMP_ENABLE_HID
 constexpr uint8_t kNkroReportBytes = 33;
 #if USB_COMP_TEST_HID
@@ -87,6 +103,10 @@ uint8_t cdc_class_id = kNoClass;
 uint8_t audio_class_id = kNoClass;
 #endif
 
+#if USB_COMP_ENABLE_MIDI
+uint8_t midi_class_id = kNoClass;
+#endif
+
 #if USB_COMP_ENABLE_HID
 uint8_t hid_ep_addr[] = {0x84U};
 #endif
@@ -96,7 +116,6 @@ uint8_t cdc_ep_addr[] = {0x82U, 0x02U, 0x83U};
 #endif
 
 #if USB_COMP_ENABLE_AUDIO
-#define DSY_RAM_D2 __attribute__((section(".heap")))
 uint8_t audio_ep_addr[] = {AUDIO_OUT_EP, AUDIO_IN_EP};
 
 constexpr uint32_t kFifoRingSize = 16384u;
@@ -108,6 +127,24 @@ uint32_t fifo_write_ptr_last = 0u;
 float phase = 0.0f;
 float phase_inc = 0.0f;
 float amplitude = 0.1f;
+#endif
+
+#if USB_COMP_ENABLE_MIDI
+uint8_t midi_ep_addr[] = {MIDI_IN_EP, MIDI_OUT_EP};
+uint8_t midi_rx_buffer[MIDI_DATA_FS_OUT_PACKET_SIZE] DSY_RAM_D2 = {0};
+#if USB_COMP_TEST_MIDI
+uint8_t midi_tx_buffer[MIDI_USB_EVENT_PACKET_SIZE] DSY_RAM_D2 = {0};
+#endif
+int8_t MIDI_Init_HS();
+int8_t MIDI_DeInit_HS();
+int8_t MIDI_Receive_HS(uint8_t* buf, uint32_t* len);
+int8_t MIDI_TransmitCplt_HS(uint8_t* buf, uint32_t* len, uint8_t epnum);
+USBD_MIDI_ItfTypeDef USB_COMP_MIDI_Interface_fops = {
+    MIDI_Init_HS,
+    MIDI_DeInit_HS,
+    MIDI_Receive_HS,
+    MIDI_TransmitCplt_HS,
+};
 #endif
 
 #if USB_COMP_ENABLE_AUDIO
@@ -190,6 +227,13 @@ void InitUSBComposite()
     hUsbDeviceHS.classId = hUsbDeviceHS.NumClasses;
 #endif
 
+#if USB_COMP_ENABLE_MIDI
+    USBD_RegisterClassComposite(&hUsbDeviceHS, USBD_MIDI_CLASS, CLASS_TYPE_MIDI, midi_ep_addr);
+    midi_class_id = static_cast<uint8_t>(USBD_CMPSIT_SetClassID(&hUsbDeviceHS, CLASS_TYPE_MIDI, 0));
+    USBD_MIDI_RegisterInterface(&hUsbDeviceHS, &USB_COMP_MIDI_Interface_fops);
+    hUsbDeviceHS.classId = hUsbDeviceHS.NumClasses;
+#endif
+
     USBD_Start(&hUsbDeviceHS);
 }
 
@@ -236,6 +280,85 @@ void RunHidTest()
     SendHidReport();
 #endif
 }
+
+#if USB_COMP_ENABLE_MIDI
+#if USB_COMP_TEST_MIDI
+bool SendMidiPacket(uint8_t cin, uint8_t status, uint8_t data1, uint8_t data2)
+{
+    if(midi_class_id == kNoClass)
+        return false;
+
+    midi_tx_buffer[0] = cin;
+    midi_tx_buffer[1] = status;
+    midi_tx_buffer[2] = data1;
+    midi_tx_buffer[3] = data2;
+    if(USBD_MIDI_SetTxBuffer(&hUsbDeviceHS, midi_tx_buffer, sizeof(midi_tx_buffer), midi_class_id) != USBD_OK)
+        return false;
+    return USBD_MIDI_TransmitPacket(&hUsbDeviceHS, midi_class_id) == USBD_OK;
+}
+#endif
+
+void RunMidiTest()
+{
+    // MIDI test traffic is request/response driven from MIDI_Receive_HS().
+    // This avoids wedging the bulk IN endpoint before a host reader is open.
+}
+
+int8_t MIDI_Init_HS()
+{
+    if(midi_class_id == kNoClass)
+        return USBD_FAIL;
+    return USBD_MIDI_SetRxBuffer(&hUsbDeviceHS, midi_rx_buffer, midi_class_id);
+}
+
+int8_t MIDI_DeInit_HS()
+{
+    return USBD_OK;
+}
+
+int8_t MIDI_Receive_HS(uint8_t* buf, uint32_t* len)
+{
+    if(buf == nullptr || len == nullptr)
+        return USBD_FAIL;
+
+    for(uint32_t offset = 0; offset + MIDI_USB_EVENT_PACKET_SIZE <= *len; offset += MIDI_USB_EVENT_PACKET_SIZE)
+    {
+        const uint8_t cin = buf[offset] & 0x0F;
+        const uint8_t status = buf[offset + 1];
+        const uint8_t data2 = buf[offset + 3];
+#if USB_COMP_TEST_MIDI
+        const uint8_t data1 = buf[offset + 2];
+#endif
+
+        if((cin == 0x09U) && ((status & 0xF0U) == 0x90U) && data2 != 0U)
+        {
+            hw.SetLed(true);
+#if USB_COMP_TEST_MIDI
+            SendCdcString("COMP MIDI RX\r\n");
+            SendMidiPacket(0x09, 0x90, static_cast<uint8_t>(data1 + 1U), data2);
+#endif
+        }
+        else if((cin == 0x08U) || (((status & 0xF0U) == 0x80U) || (((status & 0xF0U) == 0x90U) && data2 == 0U)))
+        {
+            hw.SetLed(false);
+#if USB_COMP_TEST_MIDI
+            SendCdcString("COMP MIDI RX\r\n");
+            SendMidiPacket(0x08, 0x80, static_cast<uint8_t>(data1 + 1U), 0);
+#endif
+        }
+    }
+
+    return USBD_OK;
+}
+
+int8_t MIDI_TransmitCplt_HS(uint8_t* buf, uint32_t* len, uint8_t epnum)
+{
+    (void)buf;
+    (void)len;
+    (void)epnum;
+    return USBD_OK;
+}
+#endif
 
 #if USB_COMP_ENABLE_AUDIO
 void InitAudioTestSignal()
@@ -314,6 +437,9 @@ int main(void)
             cdc_ready_sent = SendCdcString("COMP CDC NKRO ready\r\n");
         RunCdcTest(led);
         RunHidTest();
+#if USB_COMP_ENABLE_MIDI
+        RunMidiTest();
+#endif
         System::Delay(1000);
     }
 }

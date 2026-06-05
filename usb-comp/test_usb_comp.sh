@@ -4,9 +4,11 @@ set -euo pipefail
 TEST_CDC="${TEST_CDC:-1}"
 TEST_HID="${TEST_HID:-1}"
 TEST_AUDIO="${TEST_AUDIO:-1}"
+TEST_MIDI="${TEST_MIDI:-1}"
 CDC_TIMEOUT="${CDC_TIMEOUT:-5}"
 HID_TIMEOUT="${HID_TIMEOUT:-6}"
 AUDIO_TIMEOUT="${AUDIO_TIMEOUT:-6}"
+MIDI_TIMEOUT="${MIDI_TIMEOUT:-6}"
 PRODUCT_PATTERN="${PRODUCT_PATTERN:-USB Composite Sample}"
 
 find_cdc_port() {
@@ -61,6 +63,21 @@ find_audio_card() {
         sub(/:.*/, "", line)
         print line
         exit
+      }
+    }'
+}
+
+find_midi_port() {
+  amidi -l 2>/dev/null | awk -v product="$PRODUCT_PATTERN" '
+    /^IO[[:space:]]+hw:/ || /^I[[:space:]]+hw:/ || /^O[[:space:]]+hw:/ {
+      line = $0
+      if (index(line, product) || index(line, "Composite") || index(line, "Daisy")) {
+        for (i = 1; i <= NF; i++) {
+          if ($i ~ /^hw:/) {
+            print $i
+            exit
+          }
+        }
       }
     }'
 }
@@ -146,6 +163,27 @@ PY
 )"
   printf '%s\n' "$hid_output"
   grep -F 'KEY_A' <<<"$hid_output"
+fi
+
+if [[ "$TEST_MIDI" == "1" ]]; then
+  midi_port="$(find_midi_port)"
+  if [[ -z "$midi_port" ]]; then
+    echo "No USB MIDI port found"
+    amidi -l || true
+    exit 1
+  fi
+
+  echo "MIDI port: ${midi_port}"
+  midi_dump="$(mktemp /tmp/usb-comp-midi.XXXXXX.txt)"
+  cleanup_midi() {
+    rm -f "$midi_dump"
+  }
+  trap cleanup_midi EXIT
+
+  timeout "$MIDI_TIMEOUT" amidi -p "$midi_port" -S '90 3C 40' -d >"$midi_dump" 2>&1 || true
+
+  cat "$midi_dump"
+  grep -Eq '90[[:space:]]+3D' "$midi_dump"
 fi
 
 if [[ "$TEST_AUDIO" == "1" ]]; then

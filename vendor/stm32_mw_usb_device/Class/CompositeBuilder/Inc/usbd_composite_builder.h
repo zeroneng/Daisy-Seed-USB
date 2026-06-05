@@ -59,6 +59,10 @@ extern "C" {
 #include "usbd_audio.h"
 #endif /* USBD_CMPSIT_ACTIVATE_AUDIO */
 
+#if USBD_CMPSIT_ACTIVATE_MIDI == 1
+#include "usbd_midi.h"
+#endif /* USBD_CMPSIT_ACTIVATE_MIDI */
+
 #if USBD_CMPSIT_ACTIVATE_CUSTOMHID == 1
 #include "usbd_customhid.h"
 #endif /* USBD_CMPSIT_ACTIVATE_CUSTOMHID */
@@ -109,6 +113,10 @@ extern "C" {
 #ifndef USBD_CMPSIT_ACTIVATE_AUDIO
 #define USBD_CMPSIT_ACTIVATE_AUDIO                         0U
 #endif /* USBD_CMPSIT_ACTIVATE_AUDIO */
+
+#ifndef USBD_CMPSIT_ACTIVATE_MIDI
+#define USBD_CMPSIT_ACTIVATE_MIDI                          0U
+#endif /* USBD_CMPSIT_ACTIVATE_MIDI */
 
 #ifndef USBD_CMPSIT_ACTIVATE_CUSTOMHID
 #define USBD_CMPSIT_ACTIVATE_CUSTOMHID                     0U
@@ -286,4 +294,3 @@ uint8_t USBD_CMPST_ClearConfDesc(USBD_HandleTypeDef *pdev);
 /**
   * @}
   */
-

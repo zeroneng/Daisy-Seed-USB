@@ -203,21 +203,23 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
         if(HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK) { Error_Handler(); }
 
         /* FIFO allocation (in 32-bit words, total FS FIFO = 320 words = 1280 B):
-             Rx FIFO   = 0x4C words — shared OUT/control receive FIFO
+             Rx FIFO   = 0x5C words — shared OUT/control receive FIFO
              TX0 FIFO  = 0x10 words — EP0 control
-             TX1 FIFO  = 0xC0 words — EP1 IN audio capture
+             TX1 FIFO  = 0xA0 words — EP1 IN audio capture
              TX2 FIFO  = 0x10 words — CDC data IN
              TX3 FIFO  = 0x04 words — CDC command IN
              TX4 FIFO  = 0x10 words — HID keyboard IN
-           Total used = 0x140 = 320 words. Audio IN needs the large FIFO; a
-           smaller EP1 FIFO makes Linux SET_INTERFACE for capture fail with EPIPE.
+             TX5 FIFO  = 0x10 words — MIDI data IN
+           Total used = 0x140 = 320 words. The larger Rx FIFO gives CDC, audio,
+           and MIDI OUT transfers enough shared receive space.
         */
-        HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x4C);
+        HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x5C);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x10);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0xC0);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0xA0);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 2, 0x10);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 3, 0x04);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 4, 0x10);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 5, 0x10);
     }
 
     if(pdev->id == DEVICE_HS)
@@ -246,6 +248,7 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 2, 0x40);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 3, 0x08);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 4, 0x10);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 5, 0x10);
     }
 
     return USBD_OK;

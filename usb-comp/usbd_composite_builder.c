@@ -133,6 +133,10 @@ static void  USBD_CMPSIT_CDC_ECMDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, _
 static void  USBD_CMPSIT_AUDIODesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __IO uint32_t *Sze, uint8_t speed);
 #endif /* USBD_CMPSIT_ACTIVATE_AUDIO == 1U */
 
+#if USBD_CMPSIT_ACTIVATE_MIDI == 1U
+static void  USBD_CMPSIT_MIDIDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __IO uint32_t *Sze, uint8_t speed);
+#endif /* USBD_CMPSIT_ACTIVATE_MIDI == 1U */
+
 #if USBD_CMPSIT_ACTIVATE_CUSTOMHID == 1
 static void  USBD_CMPSIT_CUSTOMHIDDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __IO uint32_t *Sze, uint8_t speed);
 #endif /* USBD_CMPSIT_ACTIVATE_CUSTOMHID == 1U */
@@ -510,6 +514,32 @@ uint8_t  USBD_CMPSIT_AddToConfDesc(USBD_HandleTypeDef *pdev)
 
       break;
 #endif /* USBD_CMPSIT_ACTIVATE_AUDIO */
+
+#if USBD_CMPSIT_ACTIVATE_MIDI == 1
+    case CLASS_TYPE_MIDI:
+      pdev->tclasslist[pdev->classId].CurrPcktSze = MIDI_DATA_FS_MAX_PACKET_SIZE;
+
+      idxIf = USBD_CMPSIT_FindFreeIFNbr(pdev);
+      pdev->tclasslist[pdev->classId].NumIf = 2U;
+      pdev->tclasslist[pdev->classId].Ifs[0] = idxIf;
+      pdev->tclasslist[pdev->classId].Ifs[1] = (uint8_t)(idxIf + 1U);
+
+      pdev->tclasslist[pdev->classId].NumEps = 2U;
+
+      iEp = pdev->tclasslist[pdev->classId].EpAdd[0];
+      USBD_CMPSIT_AssignEp(pdev, iEp, USBD_EP_TYPE_BULK, pdev->tclasslist[pdev->classId].CurrPcktSze);
+
+      iEp = pdev->tclasslist[pdev->classId].EpAdd[1];
+      USBD_CMPSIT_AssignEp(pdev, iEp, USBD_EP_TYPE_BULK, pdev->tclasslist[pdev->classId].CurrPcktSze);
+
+      USBD_CMPSIT_MIDIDesc(pdev, (uint32_t)pCmpstFSConfDesc, &CurrFSConfDescSz, (uint8_t)USBD_SPEED_FULL);
+
+#ifdef USE_USB_HS
+      USBD_CMPSIT_MIDIDesc(pdev, (uint32_t)pCmpstHSConfDesc, &CurrHSConfDescSz, (uint8_t)USBD_SPEED_HIGH);
+#endif /* USE_USB_HS */
+
+      break;
+#endif /* USBD_CMPSIT_ACTIVATE_MIDI */
 
 #if USBD_CMPSIT_ACTIVATE_CUSTOMHID == 1
     case CLASS_TYPE_CHID:
@@ -1220,6 +1250,77 @@ static void  USBD_CMPSIT_AUDIODesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __I
   ((USBD_ConfigDescTypeDef *)pConf)->wTotalLength = (uint16_t)(*Sze);
 }
 #endif /* USBD_CMPSIT_ACTIVATE_AUDIO */
+
+#if USBD_CMPSIT_ACTIVATE_MIDI == 1
+/**
+  * @brief  USBD_CMPSIT_MIDIDesc
+  *         Configure and Append the MIDI Descriptor
+  * @param  pdev: device instance
+  * @param  pConf: Configuration descriptor pointer
+  * @param  Sze: pointer to the current configuration descriptor size
+  * @retval None
+  */
+static void  USBD_CMPSIT_MIDIDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __IO uint32_t *Sze, uint8_t speed)
+{
+  uint8_t *desc = (uint8_t *)(pConf + *Sze);
+  const uint8_t ac_if = pdev->tclasslist[pdev->classId].Ifs[0];
+  const uint8_t ms_if = pdev->tclasslist[pdev->classId].Ifs[1];
+  const uint8_t in_ep = pdev->tclasslist[pdev->classId].Eps[0].add;
+  const uint8_t out_ep = pdev->tclasslist[pdev->classId].Eps[1].add;
+  const uint8_t packet_size = (speed == (uint8_t)USBD_SPEED_HIGH)
+                                ? MIDI_DATA_HS_MAX_PACKET_SIZE
+                                : MIDI_DATA_FS_MAX_PACKET_SIZE;
+  uint32_t idx = 0U;
+
+#if USBD_COMPOSITE_USE_IAD == 1
+  const uint8_t iad[] = {
+    0x08U, USB_DESC_TYPE_IAD, ac_if, 0x02U,
+    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOCONTROL, AUDIO_PROTOCOL_UNDEFINED, 0x00U,
+  };
+  USBD_memcpy(desc + idx, iad, sizeof(iad));
+  idx += (uint32_t)sizeof(iad);
+#endif /* USBD_COMPOSITE_USE_IAD == 1 */
+
+  const uint8_t midi_desc[] = {
+    /* Audio Control interface for the MIDIStreaming collection */
+    0x09U, USB_DESC_TYPE_INTERFACE, ac_if, 0x00U, 0x00U,
+    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOCONTROL, AUDIO_PROTOCOL_UNDEFINED, 0x00U,
+    0x09U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, 0x01U,
+    0x00U, 0x01U, 0x09U, 0x00U, 0x01U, ms_if,
+
+    /* MIDIStreaming interface */
+    0x09U, USB_DESC_TYPE_INTERFACE, ms_if, 0x00U, 0x02U,
+    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_MIDISTREAMING, AUDIO_PROTOCOL_UNDEFINED, 0x00U,
+    0x07U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_STREAMING_HEADER,
+    0x00U, 0x01U, 0x41U, 0x00U,
+
+    /* Embedded/external MIDI IN jacks */
+    0x06U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_IN_JACK, 0x01U, 0x01U, 0x00U,
+    0x06U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_IN_JACK, 0x02U, 0x02U, 0x00U,
+
+    /* Embedded/external MIDI OUT jacks */
+    0x09U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_OUT_JACK, 0x01U, 0x03U, 0x01U, 0x02U, 0x01U, 0x00U,
+    0x09U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_OUT_JACK, 0x02U, 0x06U, 0x01U, 0x01U, 0x01U, 0x00U,
+
+    /* OUT endpoint: host -> device */
+    0x09U, USB_DESC_TYPE_ENDPOINT, out_ep, USBD_EP_TYPE_BULK,
+    LOBYTE(packet_size), HIBYTE(packet_size), 0x00U, 0x00U, 0x00U,
+    0x05U, AUDIO_ENDPOINT_DESCRIPTOR_TYPE, MIDI_ENDPOINT_GENERAL, 0x01U, 0x01U,
+
+    /* IN endpoint: device -> host */
+    0x09U, USB_DESC_TYPE_ENDPOINT, in_ep, USBD_EP_TYPE_BULK,
+    LOBYTE(packet_size), HIBYTE(packet_size), 0x00U, 0x00U, 0x00U,
+    0x05U, AUDIO_ENDPOINT_DESCRIPTOR_TYPE, MIDI_ENDPOINT_GENERAL, 0x01U, 0x03U,
+  };
+
+  USBD_memcpy(desc + idx, midi_desc, sizeof(midi_desc));
+  idx += (uint32_t)sizeof(midi_desc);
+  *Sze += idx;
+
+  ((USBD_ConfigDescTypeDef *)pConf)->bNumInterfaces += 2U;
+  ((USBD_ConfigDescTypeDef *)pConf)->wTotalLength = (uint16_t)(*Sze);
+}
+#endif /* USBD_CMPSIT_ACTIVATE_MIDI */
 
 #if USBD_CMPSIT_ACTIVATE_RNDIS == 1
 /**
