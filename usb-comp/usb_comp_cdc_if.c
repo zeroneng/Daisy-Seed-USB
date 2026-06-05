@@ -1,9 +1,6 @@
 #include "usb_comp_cdc_if.h"
 #include <string.h>
 
-#define APP_RX_DATA_SIZE 2048
-#define APP_TX_DATA_SIZE 2048
-
 uint8_t UserRxBufferHS[APP_RX_DATA_SIZE];
 uint8_t UserTxBufferHS[APP_TX_DATA_SIZE];
 uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];

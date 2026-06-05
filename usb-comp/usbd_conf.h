@@ -11,7 +11,7 @@ extern "C" {
 #include "stm32h7xx.h"
 #include "stm32h7xx_hal.h"
 
-#define USBD_MAX_NUM_INTERFACES     3U
+#define USBD_MAX_NUM_INTERFACES     6U
 #define USBD_MAX_NUM_CONFIGURATION  1U
 #define USBD_MAX_STR_DESC_SIZ       512U
 #define USBD_SUPPORT_USER_STRING    1U
@@ -25,6 +25,8 @@ extern "C" {
 
 #define APP_RX_DATA_SIZE  2048U
 #define APP_TX_DATA_SIZE  2048U
+
+#define USBD_CMPST_MAX_CONFDESC_SZ  512U
 
 #define USBD_malloc         malloc
 #define USBD_free           free

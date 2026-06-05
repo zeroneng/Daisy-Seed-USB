@@ -3,8 +3,10 @@ set -euo pipefail
 
 TEST_CDC="${TEST_CDC:-1}"
 TEST_HID="${TEST_HID:-1}"
+TEST_AUDIO="${TEST_AUDIO:-1}"
 CDC_TIMEOUT="${CDC_TIMEOUT:-5}"
 HID_TIMEOUT="${HID_TIMEOUT:-6}"
+AUDIO_TIMEOUT="${AUDIO_TIMEOUT:-6}"
 PRODUCT_PATTERN="${PRODUCT_PATTERN:-USB Composite Sample}"
 
 find_cdc_port() {
@@ -44,6 +46,23 @@ find_hid_event() {
   done
 
   return 1
+}
+
+find_audio_card() {
+  local direction="${1:-capture}"
+  local cmd="arecord"
+  [[ "$direction" == "playback" ]] && cmd="aplay"
+
+  "$cmd" -l 2>/dev/null | awk -v product="$PRODUCT_PATTERN" '
+    /^card [0-9]+:/ {
+      line = $0
+      if (index(line, product) || index(line, "Composite") || index(line, "Daisy")) {
+        sub(/^card /, "", line)
+        sub(/:.*/, "", line)
+        print line
+        exit
+      }
+    }'
 }
 
 echo "USB devices matching '${PRODUCT_PATTERN}':"
@@ -127,6 +146,72 @@ PY
 )"
   printf '%s\n' "$hid_output"
   grep -F 'KEY_A' <<<"$hid_output"
+fi
+
+if [[ "$TEST_AUDIO" == "1" ]]; then
+  capture_card="$(find_audio_card capture)"
+  playback_card="$(find_audio_card playback)"
+
+  if [[ -z "$capture_card" ]]; then
+    echo "No USB capture audio card found"
+    arecord -l || true
+    exit 1
+  fi
+
+  if [[ -z "$playback_card" ]]; then
+    echo "No USB playback audio card found"
+    aplay -l || true
+    exit 1
+  fi
+
+  echo "Audio capture card: hw:${capture_card},0"
+  echo "Audio playback card: hw:${playback_card},0"
+
+  capture_raw="$(mktemp /tmp/usb-comp-capture.XXXXXX.raw)"
+  playback_raw="$(mktemp /tmp/usb-comp-playback.XXXXXX.raw)"
+  cleanup_audio() {
+    rm -f "$capture_raw" "$playback_raw"
+  }
+  trap cleanup_audio EXIT
+
+  timeout "$AUDIO_TIMEOUT" arecord -q -D "hw:${capture_card},0" \
+    -f S16_LE -c 2 -r 48000 --period-size=48 --buffer-size=480 \
+    -d 1 -t raw "$capture_raw"
+  [[ -s "$capture_raw" ]]
+
+  python3 - "$capture_raw" <<'PY'
+import os
+import struct
+import sys
+
+path = sys.argv[1]
+data = open(path, "rb").read()
+samples = struct.unpack("<" + "h" * (len(data) // 2), data)
+peak = max((abs(s) for s in samples), default=0)
+if peak < 64:
+    raise SystemExit(f"captured audio peak too low: {peak}")
+print(f"Audio capture peak: {peak}")
+PY
+
+  python3 - "$playback_raw" <<'PY'
+import math
+import struct
+import sys
+
+path = sys.argv[1]
+rate = 48000
+freq = 220
+frames = rate // 4
+amp = 4096
+with open(path, "wb") as f:
+    for i in range(frames):
+        s = int(math.sin(2 * math.pi * freq * i / rate) * amp)
+        f.write(struct.pack("<hh", s, s))
+PY
+
+  timeout "$AUDIO_TIMEOUT" aplay -q -D "hw:${playback_card},0" \
+    -f S16_LE -c 2 -r 48000 --period-size=48 --buffer-size=480 \
+    -t raw "$playback_raw"
 fi
 
 echo "usb-comp host validation passed"

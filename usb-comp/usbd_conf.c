@@ -203,18 +203,21 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
         if(HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK) { Error_Handler(); }
 
         /* FIFO allocation (in 32-bit words, total FS FIFO = 320 words = 1280 B):
-             Rx FIFO   = 0x80 words (128 * 4 = 512 B) — shared receive FIFO
-             TX0 FIFO  = 0x40 words (64  * 4 = 256 B) — EP0 control
-             TX1 FIFO  = 0xC0 words (192 * 4 = 768 B) — EP1 IN audio
-                                                          (192 B/packet * 2 = 384 B min;
-                                                           0xC0 words = 768 B gives 2-packet headroom)
-           Total used = 0x80 + 0x40 + 0xC0 = 0x140 = 320 words ✓
+             Rx FIFO   = 0x4C words — shared OUT/control receive FIFO
+             TX0 FIFO  = 0x10 words — EP0 control
+             TX1 FIFO  = 0xC0 words — EP1 IN audio capture
+             TX2 FIFO  = 0x10 words — CDC data IN
+             TX3 FIFO  = 0x04 words — CDC command IN
+             TX4 FIFO  = 0x10 words — HID keyboard IN
+           Total used = 0x140 = 320 words. Audio IN needs the large FIFO; a
+           smaller EP1 FIFO makes Linux SET_INTERFACE for capture fail with EPIPE.
         */
-        HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x70);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x20);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0x20);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 2, 0x40);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 3, 0x10);
+        HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x4C);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x10);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0xC0);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 2, 0x10);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 3, 0x04);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 4, 0x10);
     }
 
     if(pdev->id == DEVICE_HS)
@@ -239,9 +242,10 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
 
         HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_HS, 0x80);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 0, 0x40);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 1, 0x40);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 1, 0xC0);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 2, 0x40);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 3, 0x20);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 3, 0x08);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 4, 0x10);
     }
 
     return USBD_OK;
