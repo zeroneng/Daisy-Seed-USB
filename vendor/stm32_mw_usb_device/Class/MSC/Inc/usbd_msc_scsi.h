@@ -60,8 +60,6 @@ extern "C" {
 
 #define SCSI_REQUEST_SENSE                          0x03U
 #define SCSI_START_STOP_UNIT                        0x1BU
-#define SCSI_SYNCHRONIZE_CACHE10                    0x35U
-#define SCSI_SYNCHRONIZE_CACHE16                    0x91U
 #define SCSI_TEST_UNIT_READY                        0x00U
 #define SCSI_WRITE6                                 0x0AU
 #define SCSI_WRITE10                                0x2AU
@@ -182,3 +180,4 @@ void SCSI_SenseCode(USBD_HandleTypeDef *pdev, uint8_t lun, uint8_t sKey,
 /**
   * @}
   */
+

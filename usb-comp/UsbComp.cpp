@@ -37,18 +37,6 @@ using namespace daisy;
 #define USB_COMP_TEST_MIDI 1
 #endif
 
-#ifndef USB_COMP_ENABLE_MSC
-#define USB_COMP_ENABLE_MSC 0
-#endif
-
-#ifndef USB_COMP_TEST_MSC
-#define USB_COMP_TEST_MSC 1
-#endif
-
-#ifndef USB_COMP_MSC_USE_SD
-#define USB_COMP_MSC_USE_SD 0
-#endif
-
 extern "C" {
 #include "usbd_core.h"
 #include "usbd_desc.h"
@@ -71,14 +59,6 @@ extern "C" {
 
 #if USB_COMP_ENABLE_MIDI
 #include "usbd_midi.h"
-#endif
-
-#if USB_COMP_ENABLE_MSC
-#include "usbd_msc.h"
-#include "usbd_msc_storage.h"
-#if USB_COMP_MSC_USE_SD
-int STORAGE_SD_Init(uint32_t* block_count);
-#endif
 #endif
 
 extern USBD_HandleTypeDef hUsbDeviceHS;
@@ -127,10 +107,6 @@ uint8_t audio_class_id = kNoClass;
 uint8_t midi_class_id = kNoClass;
 #endif
 
-#if USB_COMP_ENABLE_MSC
-uint8_t msc_class_id = kNoClass;
-#endif
-
 #if USB_COMP_ENABLE_HID
 uint8_t hid_ep_addr[] = {0x84U};
 #endif
@@ -169,10 +145,6 @@ USBD_MIDI_ItfTypeDef USB_COMP_MIDI_Interface_fops = {
     MIDI_Receive_HS,
     MIDI_TransmitCplt_HS,
 };
-#endif
-
-#if USB_COMP_ENABLE_MSC
-uint8_t msc_ep_addr[] = {0x85U, 0x04U};
 #endif
 
 #if USB_COMP_ENABLE_AUDIO
@@ -231,26 +203,6 @@ void SetKeyState(uint8_t keycode, bool pressed)
 }
 #endif
 
-#if USB_COMP_ENABLE_MSC && USB_COMP_MSC_USE_SD
-void InitMscStorage()
-{
-    STORAGE_UserInit();
-    g_msc_sd_ready = 0;
-    g_msc_sd_block_count = 0;
-
-    uint32_t block_count = 0;
-    if(STORAGE_SD_Init(&block_count) != 0)
-    {
-        g_msc_diag_state = 2;
-        return;
-    }
-
-    g_msc_sd_block_count = block_count;
-    g_msc_sd_ready = g_msc_sd_block_count > 0 ? 1 : 0;
-    g_msc_diag_state = g_msc_sd_ready ? 9 : 5;
-}
-#endif
-
 void InitUSBComposite()
 {
     USBD_Init(&hUsbDeviceHS, &HS_Desc, DEVICE_HS);
@@ -279,13 +231,6 @@ void InitUSBComposite()
     USBD_RegisterClassComposite(&hUsbDeviceHS, USBD_MIDI_CLASS, CLASS_TYPE_MIDI, midi_ep_addr);
     midi_class_id = static_cast<uint8_t>(USBD_CMPSIT_SetClassID(&hUsbDeviceHS, CLASS_TYPE_MIDI, 0));
     USBD_MIDI_RegisterInterface(&hUsbDeviceHS, &USB_COMP_MIDI_Interface_fops);
-    hUsbDeviceHS.classId = hUsbDeviceHS.NumClasses;
-#endif
-
-#if USB_COMP_ENABLE_MSC
-    USBD_RegisterClassComposite(&hUsbDeviceHS, USBD_MSC_CLASS, CLASS_TYPE_MSC, msc_ep_addr);
-    msc_class_id = static_cast<uint8_t>(USBD_CMPSIT_SetClassID(&hUsbDeviceHS, CLASS_TYPE_MSC, 0));
-    USBD_MSC_RegisterStorage(&hUsbDeviceHS, &USBD_MSC_Template_fops);
     hUsbDeviceHS.classId = hUsbDeviceHS.NumClasses;
 #endif
 
@@ -466,13 +411,6 @@ void AudioCallback(AudioHandle::InputBuffer in,
 int main(void)
 {
     hw.Init();
-#if USB_COMP_ENABLE_MSC
-#if USB_COMP_MSC_USE_SD
-    InitMscStorage();
-#else
-    STORAGE_UserInit();
-#endif
-#endif
 #if USB_COMP_ENABLE_AUDIO
     hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
     hw.SetAudioBlockSize(48);
