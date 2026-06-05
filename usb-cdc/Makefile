@@ -31,7 +31,7 @@ CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) -include stm32h7xx.h -O2 -Wall -Wno-miss
 CPPFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti -fno-unwind-tables -fshort-enums -Wno-register -std=gnu++14
 LDFLAGS = $(MCU) --specs=nano.specs --specs=nosys.specs -T$(LIBDAISY_DIR)/core/STM32H750IB_flash.lds -L$(LIBDAISY_DIR)/build -ldaisy -lc -lm -lnosys -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections -Wl,--print-memory-usage
 
-CPP_SOURCES = UsbCdc.cpp
+CPP_SOURCES = UsbCdc.cpp CDC.cpp
 C_SOURCES = usbd_conf.c usbd_desc.c $(LIBDAISY_DIR)/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c $(LIBDAISY_DIR)/core/startup_stm32h750xx.c
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o))) $(addprefix $(BUILD_DIR)/,$(notdir $(CPP_SOURCES:.cpp=.o)))
 vpath %.c $(sort $(dir $(C_SOURCES)))
