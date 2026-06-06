@@ -7,6 +7,29 @@ It is meant to be a practical starting point for projects that need several USB
 functions on the Daisy external USB port without moving the whole application to
 TinyUSB.
 
+## What This Project Proves
+
+This project proves that the following stack works on the Pi/Daisy setup used
+for development:
+
+- Daisy Seed / STM32H750 external USB connector
+- ST USB Device composite stack
+- local composite descriptor builder
+- CDC ACM serial
+- NKRO HID keyboard
+- USB audio capture/playback
+- USB MIDI
+- SD-backed MSC when exposed as a separate storage-mode function
+
+It also proves that the external USB path can be owned explicitly by the
+application instead of relying on libDaisy's `hw.StartLog(false)` CDC/logging
+startup path.
+
+The important migration lesson is that USB ownership, descriptors, endpoint
+numbers, FIFO allocation, and class registration order all need to move
+together. Port the known-good shape first, then replace the test behavior with
+product behavior.
+
 ## Current Capabilities
 
 The sample can compile these USB functions into one composite device:
@@ -189,6 +212,22 @@ Opening CDC or resetting the composite device while Linux has an active MSC
 READ(10) can wedge the host USB path until reboot. Test storage first, then test
 the other interfaces, or keep MSC disabled while validating performance mode.
 
+## Minimal Migration Goal
+
+For a first merge into another Daisy application, keep the target simple:
+
+- build cleanly with CDC + HID + audio + MIDI enabled and MSC disabled
+- enumerate on the external USB port as one composite device
+- create a CDC ACM device on the host
+- send/receive one simple CDC command or status message
+- produce one known HID key press/release event
+- enumerate MIDI and echo or receive one short MIDI message
+- enumerate audio capture/playback
+- leave product audio, storage mode, and full app routing for later layers
+
+Once that baseline works inside the target project, remove the generated test
+traffic and connect each USB class to the real application code.
+
 ## Runtime MSC Control
 
 When MSC is compiled in, the USB MSC descriptor can enumerate while the storage
@@ -231,6 +270,10 @@ application and then replace the test behaviors with your product behaviors.
    state. `usb-comp` is not meant to become your whole app; it is a reference for
    how to register and service the composite USB classes.
 
+   Avoid calling `hw.StartLog(false)` for the same external USB device after the
+   composite stack owns USB. CDC should be one class inside this composite
+   device, not a second USB startup path.
+
 2. Copy the required USB source files.
 
    At minimum, bring these into your project:
@@ -262,6 +305,42 @@ application and then replace the test behaviors with your product behaviors.
    -DUSBD_CMPSIT_ACTIVATE_MSC=$(USB_COMP_ENABLE_MSC)
    ```
 
+   Example performance-mode source shape:
+
+   ```make
+   C_SOURCES += \
+     usb/usbd_conf.c \
+     usb/usbd_desc.c \
+     usb/usbd_composite_builder.c \
+     usb/usb_comp_cdc_if.c \
+     usb/usbd_audio.c \
+     usb/usbd_audio_if.c \
+     usb/usbd_midi.c \
+     usb/usbd_hid_kbd.c \
+     $(ST_USB_DEVICE_DIR)/Core/Src/usbd_core.c \
+     $(ST_USB_DEVICE_DIR)/Core/Src/usbd_ctlreq.c \
+     $(ST_USB_DEVICE_DIR)/Core/Src/usbd_ioreq.c \
+     $(ST_USB_DEVICE_DIR)/Class/CDC/Src/usbd_cdc.c
+   ```
+
+   Add `usbd_msc_storage.c` and `UsbCompMscSdBackend.cpp` only when you are ready
+   to compile MSC support into the target app.
+
+   Keep your project include path before libDaisy's USB include path:
+
+   ```make
+   C_INCLUDES += \
+     -Iusb \
+     -I$(ST_USB_DEVICE_DIR)/Core/Inc \
+     -I$(ST_USB_DEVICE_DIR)/Class/CDC/Inc \
+     -I$(ST_USB_DEVICE_DIR)/Class/MSC/Inc \
+     -I$(ST_USB_DEVICE_DIR)/Class/CompositeBuilder/Inc \
+     -I$(LIBDAISY_DIR)/src/usbd
+   ```
+
+   The `-Iusb` ordering matters because the USB core must see your local
+   composite `usbd_conf.h`, not libDaisy's default one-interface copy.
+
 4. Register classes in a known-good order.
 
    `InitUSBComposite()` shows the registration pattern. Keep the endpoint arrays
@@ -276,6 +355,26 @@ application and then replace the test behaviors with your product behaviors.
    Do not casually move endpoint numbers. EP6 IN is acceptable for CDC
    notification, but it did not behave as a reliable real data path in this
    full-speed ST composite setup.
+
+   Minimal startup shape:
+
+   ```cpp
+   hw.Init();
+   InitUSBComposite();
+
+   while(1)
+   {
+       RunCdcService();
+       RunHidService();
+       RunMidiService();
+       RunStorageModeService();
+       System::Delay(1);
+   }
+   ```
+
+   The exact function names in your app can change. The ownership model should
+   not: initialize the Daisy hardware, initialize one composite USB device, then
+   service the enabled USB classes from the main loop or their callbacks.
 
 5. Keep the FIFO allocation matched to the endpoint layout.
 
@@ -292,6 +391,24 @@ application and then replace the test behaviors with your product behaviors.
    - Replace the generated audio test tone with RHYTHM audio data.
    - Keep MSC behind explicit storage-mode entry/exit calls.
 
+   Example CDC command hook:
+
+   ```cpp
+   if(command == "storage on")
+   {
+       StopAudioForStorageMode();
+       USB_COMP_MSC_Enable();
+   }
+   else if(command == "storage off")
+   {
+       USB_COMP_MSC_Disable();
+       StartAudioForPerformanceMode();
+   }
+   ```
+
+   Only use a command like this after the product has a clear UI/host workflow
+   for ejecting the disk. Do not disable MSC while the host has it mounted.
+
 7. Decide on a mode model.
 
    For RHYTHM, the recommended model is:
@@ -305,6 +422,92 @@ application and then replace the test behaviors with your product behaviors.
    Start with descriptors and enumeration, then each active interface. Do MSC
    reads/writes by themselves. Do not run storage I/O while scripts are opening
    CDC or otherwise causing USB reset/re-enumeration.
+
+## RHYTHM Example Profiles
+
+Performance mode, no generated test traffic:
+
+```bash
+make clean
+make \
+  USB_COMP_ENABLE_CDC=1 \
+  USB_COMP_ENABLE_HID=1 \
+  USB_COMP_ENABLE_AUDIO=1 \
+  USB_COMP_ENABLE_MIDI=1 \
+  USB_COMP_ENABLE_MSC=0 \
+  USB_COMP_TEST_CDC=0 \
+  USB_COMP_TEST_HID=0 \
+  USB_COMP_TEST_AUDIO=0 \
+  USB_COMP_TEST_MIDI=0
+```
+
+Storage-capable build, with MSC compiled in but not exposed at boot:
+
+```bash
+make clean
+make \
+  USB_COMP_ENABLE_CDC=1 \
+  USB_COMP_ENABLE_HID=1 \
+  USB_COMP_ENABLE_AUDIO=1 \
+  USB_COMP_ENABLE_MIDI=1 \
+  USB_COMP_ENABLE_MSC=1 \
+  USB_COMP_MSC_USE_SD=1 \
+  USB_COMP_MSC_START_ENABLED=0 \
+  USB_COMP_AUDIO_START_ON_BOOT=0 \
+  USB_COMP_TEST_CDC=0 \
+  USB_COMP_TEST_HID=0 \
+  USB_COMP_TEST_AUDIO=0 \
+  USB_COMP_TEST_MIDI=0 \
+  USB_COMP_TEST_MSC=0
+```
+
+First host validation after migrating:
+
+```bash
+TEST_CDC=1 TEST_HID=1 TEST_AUDIO=1 TEST_MIDI=1 TEST_MSC=0 \
+bash ./test_usb_comp.sh
+```
+
+Storage validation should be separate:
+
+```bash
+TEST_CDC=0 TEST_HID=0 TEST_AUDIO=0 TEST_MIDI=0 TEST_MSC=1 \
+bash ./test_usb_comp.sh
+```
+
+## Symptoms This Integration Avoids
+
+Use this project as the reference when the target app shows any of these
+symptoms:
+
+- `hw.StartLog(false)` prevents the app from booting or enumerating correctly
+- CDC works in `usb-cdc`, but not in the product app
+- descriptors look right, but CDC/HID/MIDI traffic is silent
+- Linux audio capture fails at `SET_INTERFACE`
+- adding one class breaks another class that previously worked
+- MSC reads fail while audio DMA is running
+- the host USB path wedges after storage I/O and re-enumeration happen together
+
+Most of those failures come from one of four causes: split USB ownership,
+incorrect include order, endpoint/FIFO mismatch, or testing storage while
+another interface is resetting the device.
+
+## What Not To Do
+
+- Do not mix this composite path with `hw.StartLog(false)` on the same USB
+  device.
+- Do not copy descriptors without copying the matching endpoint arrays, FIFO
+  sizes, and class registration order.
+- Do not move endpoint numbers casually to make a descriptor "look cleaner."
+- Do not use EP6 IN for real data traffic in this full-speed ST composite setup;
+  keep it for CDC notification.
+- Do not let libDaisy's default `usbd_conf.h` shadow the local project
+  `usbd_conf.h`; keep the project include path first.
+- Do not enable generated test traffic in the product build.
+- Do not run MSC reads/writes in parallel with CDC/HID/audio/MIDI tests.
+- Do not expose MSC while RHYTHM is actively using the SD card for performance
+  work.
+- Do not bypass libDaisy-facing SD APIs in the `usb-comp` app/backend path.
 
 ## Known-Good Status
 
