@@ -29,6 +29,10 @@ using namespace daisy;
 #define USB_COMP_TEST_AUDIO 1
 #endif
 
+#ifndef USB_COMP_AUDIO_START_ON_BOOT
+#define USB_COMP_AUDIO_START_ON_BOOT 1
+#endif
+
 #ifndef USB_COMP_ENABLE_MIDI
 #define USB_COMP_ENABLE_MIDI 1
 #endif
@@ -47,6 +51,10 @@ using namespace daisy;
 
 #ifndef USB_COMP_MSC_USE_SD
 #define USB_COMP_MSC_USE_SD 0
+#endif
+
+#ifndef USB_COMP_MSC_TEST_ENABLE_DELAY_MS
+#define USB_COMP_MSC_TEST_ENABLE_DELAY_MS 0
 #endif
 
 extern "C" {
@@ -76,9 +84,6 @@ extern "C" {
 #if USB_COMP_ENABLE_MSC
 #include "usbd_msc.h"
 #include "usbd_msc_storage.h"
-#if USB_COMP_MSC_USE_SD
-int STORAGE_SD_Init(uint32_t* block_count);
-#endif
 #endif
 
 extern USBD_HandleTypeDef hUsbDeviceHS;
@@ -136,7 +141,7 @@ uint8_t hid_ep_addr[] = {0x84U};
 #endif
 
 #if USB_COMP_ENABLE_CDC
-uint8_t cdc_ep_addr[] = {0x82U, 0x02U, 0x83U};
+uint8_t cdc_ep_addr[] = {0x82U, 0x02U, 0x86U};
 #endif
 
 #if USB_COMP_ENABLE_AUDIO
@@ -172,7 +177,11 @@ USBD_MIDI_ItfTypeDef USB_COMP_MIDI_Interface_fops = {
 #endif
 
 #if USB_COMP_ENABLE_MSC
+#if !USB_COMP_ENABLE_CDC && !USB_COMP_ENABLE_HID && !USB_COMP_ENABLE_AUDIO && !USB_COMP_ENABLE_MIDI
+uint8_t msc_ep_addr[] = {0x81U, 0x01U};
+#else
 uint8_t msc_ep_addr[] = {0x85U, 0x04U};
+#endif
 #endif
 
 #if USB_COMP_ENABLE_AUDIO
@@ -228,26 +237,6 @@ void SetKeyState(uint8_t keycode, bool pressed)
         byte |= bit_mask;
     else
         byte &= static_cast<uint8_t>(~bit_mask);
-}
-#endif
-
-#if USB_COMP_ENABLE_MSC && USB_COMP_MSC_USE_SD
-void InitMscStorage()
-{
-    STORAGE_UserInit();
-    g_msc_sd_ready = 0;
-    g_msc_sd_block_count = 0;
-
-    uint32_t block_count = 0;
-    if(STORAGE_SD_Init(&block_count) != 0)
-    {
-        g_msc_diag_state = 2;
-        return;
-    }
-
-    g_msc_sd_block_count = block_count;
-    g_msc_sd_ready = g_msc_sd_block_count > 0 ? 1 : 0;
-    g_msc_diag_state = g_msc_sd_ready ? 9 : 5;
 }
 #endif
 
@@ -321,6 +310,29 @@ void RunCdcTest(bool led)
     SendCdcString(led ? "COMP CDC LED ON\r\n" : "COMP CDC LED OFF\r\n");
 #else
     (void)led;
+#endif
+}
+
+void RunMscControl()
+{
+#if USB_COMP_ENABLE_CDC && USB_COMP_ENABLE_MSC
+    const uint8_t command = USB_COMP_CDC_TakeMscCommand();
+    if(command == 0U)
+        return;
+
+    if(command == 'M')
+    {
+        SendCdcString(USB_COMP_MSC_Enable() == 0 ? "COMP MSC ON\r\n" : "COMP MSC ERR\r\n");
+    }
+    else if(command == 'm')
+    {
+        USB_COMP_MSC_Disable();
+        SendCdcString("COMP MSC OFF\r\n");
+    }
+    else if(command == 'S')
+    {
+        SendCdcString(USB_COMP_MSC_IsEnabled() ? "COMP MSC STATUS ON\r\n" : "COMP MSC STATUS OFF\r\n");
+    }
 #endif
 }
 
@@ -467,11 +479,7 @@ int main(void)
 {
     hw.Init();
 #if USB_COMP_ENABLE_MSC
-#if USB_COMP_MSC_USE_SD
-    InitMscStorage();
-#else
     STORAGE_UserInit();
-#endif
 #endif
 #if USB_COMP_ENABLE_AUDIO
     hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
@@ -481,7 +489,7 @@ int main(void)
 
     InitUSBComposite();
 
-#if USB_COMP_ENABLE_AUDIO
+#if USB_COMP_ENABLE_AUDIO && USB_COMP_AUDIO_START_ON_BOOT
     hw.StartAudio(AudioCallback);
 #endif
 
@@ -491,12 +499,25 @@ int main(void)
 
     bool led = false;
     bool cdc_ready_sent = false;
+#if USB_COMP_ENABLE_MSC && USB_COMP_MSC_TEST_ENABLE_DELAY_MS
+    const uint32_t msc_test_start = System::GetNow();
+    bool msc_test_enable_done = false;
+#endif
     for(;;)
     {
         led = !led;
         hw.SetLed(led);
         if(!cdc_ready_sent)
             cdc_ready_sent = SendCdcString("COMP CDC NKRO ready\r\n");
+        RunMscControl();
+#if USB_COMP_ENABLE_MSC && USB_COMP_MSC_TEST_ENABLE_DELAY_MS
+        if(!msc_test_enable_done
+           && (System::GetNow() - msc_test_start) >= USB_COMP_MSC_TEST_ENABLE_DELAY_MS)
+        {
+            (void)USB_COMP_MSC_Enable();
+            msc_test_enable_done = true;
+        }
+#endif
         RunCdcTest(led);
         RunHidTest();
 #if USB_COMP_ENABLE_MIDI

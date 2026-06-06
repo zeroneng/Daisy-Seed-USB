@@ -8,7 +8,7 @@ extern "C" {
 #include "usbd_ioreq.h"
 
 #define MIDI_OUT_EP                         0x03U
-#define MIDI_IN_EP                          0x85U
+#define MIDI_IN_EP                          0x83U
 #define MIDI_DATA_FS_MAX_PACKET_SIZE        64U
 #define MIDI_DATA_HS_MAX_PACKET_SIZE        512U
 #define MIDI_DATA_FS_IN_PACKET_SIZE         MIDI_DATA_FS_MAX_PACKET_SIZE
