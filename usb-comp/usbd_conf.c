@@ -204,6 +204,9 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
 
 #if USB_COMP_ENABLE_MSC
 #if !USB_COMP_ENABLE_CDC && !USB_COMP_ENABLE_HID && !USB_COMP_ENABLE_AUDIO && !USB_COMP_ENABLE_MIDI
+        /* MSC-only mirrors the simpler standalone storage topology: EP1 gets
+           enough FIFO for bulk transfers without sharing space with audio,
+           MIDI, HID, or CDC. */
         HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x80);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x40);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0x80);
@@ -216,8 +219,10 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
              TX3 FIFO  = 0x04 words — MIDI data IN
              TX4 FIFO  = 0x10 words — HID keyboard IN
              TX5 FIFO  = 0x80 words — MSC bulk IN
-             TX6 FIFO  = 0x10 words — CDC command IN
+             TX6 FIFO  = 0x10 words — CDC notification IN
            Total used = 0x140 = 320 words.
+           Keep EP6 for CDC notification only; testing showed it is not a
+           trustworthy real-data endpoint for MSC or MIDI in this setup.
         */
         HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x4C);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x10);

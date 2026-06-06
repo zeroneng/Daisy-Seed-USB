@@ -116,6 +116,9 @@ static int8_t CDC_Receive_HS_Int(uint8_t* pbuf, uint32_t* Len)
 #if USB_COMP_ENABLE_MSC
     if(pbuf && Len && *Len > 0U)
     {
+        /* Queue only a tiny command marker from the USB RX callback.  MSC
+           enable may initialize SD media, so UsbComp.cpp consumes this marker
+           later from the main loop. */
         for(uint32_t i = 0; i < *Len; ++i)
         {
             if(pbuf[i] == 'M' || pbuf[i] == 'm' || pbuf[i] == 'S')

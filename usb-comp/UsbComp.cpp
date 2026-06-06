@@ -141,6 +141,8 @@ uint8_t hid_ep_addr[] = {0x84U};
 #endif
 
 #if USB_COMP_ENABLE_CDC
+// CDC data stays on EP2.  The notification endpoint is parked on EP6 so EP3
+// can carry MIDI data and EP5 can keep the large MSC IN FIFO.
 uint8_t cdc_ep_addr[] = {0x82U, 0x02U, 0x86U};
 #endif
 
@@ -178,8 +180,11 @@ USBD_MIDI_ItfTypeDef USB_COMP_MIDI_Interface_fops = {
 
 #if USB_COMP_ENABLE_MSC
 #if !USB_COMP_ENABLE_CDC && !USB_COMP_ENABLE_HID && !USB_COMP_ENABLE_AUDIO && !USB_COMP_ENABLE_MIDI
+// MSC-only mode can use EP1 like the standalone MSC example.
 uint8_t msc_ep_addr[] = {0x81U, 0x01U};
 #else
+// Composite mode keeps MSC IN on EP5. EP6 enumerated in tests but was not
+// reliable for real MSC/MIDI data on this ST full-speed stack.
 uint8_t msc_ep_addr[] = {0x85U, 0x04U};
 #endif
 #endif
@@ -316,6 +321,8 @@ void RunCdcTest(bool led)
 void RunMscControl()
 {
 #if USB_COMP_ENABLE_CDC && USB_COMP_ENABLE_MSC
+    // CDC RX only records a command byte.  The actual MSC enable/disable work
+    // runs here in the main loop, away from the USB receive callback context.
     const uint8_t command = USB_COMP_CDC_TakeMscCommand();
     if(command == 0U)
         return;
@@ -490,6 +497,8 @@ int main(void)
     InitUSBComposite();
 
 #if USB_COMP_ENABLE_AUDIO && USB_COMP_AUDIO_START_ON_BOOT
+    // Leave this off in storage-mode builds.  Active Daisy audio DMA plus
+    // SD-backed MSC is not stable yet; performance mode enables audio at boot.
     hw.StartAudio(AudioCallback);
 #endif
 
@@ -511,6 +520,8 @@ int main(void)
             cdc_ready_sent = SendCdcString("COMP CDC NKRO ready\r\n");
         RunMscControl();
 #if USB_COMP_ENABLE_MSC && USB_COMP_MSC_TEST_ENABLE_DELAY_MS
+        // Diagnostic hook: proves runtime MSC enable from firmware without
+        // depending on CDC being usable in every descriptor profile.
         if(!msc_test_enable_done
            && (System::GetNow() - msc_test_start) >= USB_COMP_MSC_TEST_ENABLE_DELAY_MS)
         {

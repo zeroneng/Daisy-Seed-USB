@@ -17,6 +17,10 @@
 #endif
 
 #if USB_COMP_MSC_USE_SD
+/* SD-card DMA needs a cache-safe, 32-byte-aligned buffer in DMA-accessible RAM.
+   The USB stack may hand us arbitrary host buffers, so SD reads/writes pass
+   through this sector scratch buffer instead of touching the USB buffer
+   directly. */
 static uint8_t storage_sector[STORAGE_BLK_SIZ] DMA_BUFFER_MEM_SECTION __attribute__((aligned(32)));
 #else
 static uint8_t storage_ram_disk[STORAGE_RAM_BLK_NBR][STORAGE_BLK_SIZ] __attribute__((section(".heap"), aligned(4)));
@@ -85,6 +89,9 @@ USBD_StorageTypeDef USBD_MSC_Template_fops = {
 void STORAGE_UserInit(void)
 {
     g_msc_diag_counter = 0;
+    /* The MSC class may enumerate while the medium is unavailable.  That lets
+       application firmware expose SD only when it enters an explicit storage
+       mode. */
     g_msc_runtime_enabled = 0;
     g_msc_sd_ready = 0;
     g_msc_sd_block_count = 0;
@@ -210,6 +217,9 @@ static int8_t STORAGE_Read(uint8_t lun, uint8_t* buf, uint32_t blk_addr, uint16_
         return -1;
     }
 #if USB_COMP_MSC_USE_SD
+    /* Copy one sector at a time through the DMA-safe scratch buffer.  This is
+       slower than direct multi-block I/O, but it avoids alignment/cache issues
+       with host-provided MSC transfer buffers. */
     for(uint16_t i = 0; i < blk_len; ++i)
     {
         if(STORAGE_SD_ReadBlocks(storage_sector, blk_addr + i, 1) != 0)
@@ -265,6 +275,8 @@ static int8_t STORAGE_GetMaxLun(void)
 
 static int8_t STORAGE_HasMedium(void)
 {
+    /* Returning failure here makes the ST MSC/SCSI layer report no medium
+       instead of exposing a half-initialized SD card to the host. */
     if(!g_msc_runtime_enabled || !g_msc_sd_ready || g_msc_sd_block_count == 0U)
         return -1;
     return 0;

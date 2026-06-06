@@ -11,6 +11,7 @@ extern "C" {
 
 static int SD_WaitReady(void)
 {
+    // Bounded wait keeps a failed SD transaction from hanging the USB thread.
     const uint32_t start = System::GetNow();
     do
     {
@@ -29,6 +30,8 @@ int STORAGE_SD_Init(uint32_t* block_count)
         return -1;
 
     SdmmcHandler::Config sd_cfg;
+    // Stay on the Daisy/libDaisy SD path.  MEDIUM_SLOW plus power-save off
+    // matched the stable MSC behavior without dropping the bus to 1-bit mode.
     sd_cfg.width = SdmmcHandler::BusWidth::BITS_4;
     sd_cfg.speed = SdmmcHandler::Speed::MEDIUM_SLOW;
     sd_cfg.clock_powersave = false;
