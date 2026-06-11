@@ -94,6 +94,15 @@ USB audio is enabled by adding the shared `usbd_audio.c` and `usbd_audio_if.c`
 sources, enabling `USB_COMP_ENABLE_AUDIO`, and using the `UsbComp` audio bridge
 inside `AudioCallback()`:
 
+```make
+$(USB_COMP_DIR)/usbd_audio.c
+$(USB_COMP_DIR)/usbd_audio_if.c
+-DUSBD_CMPSIT_ACTIVATE_AUDIO=1
+-DUSB_COMP_ENABLE_AUDIO=1
+-DUSB_COMP_TEST_AUDIO=1
+-DUSB_COMP_AUDIO_START_ON_BOOT=1
+```
+
 ```cpp
 UsbComp::PushCapture(capture_l, capture_r);
 UsbComp::PopPlayback(usb_l, usb_r);
@@ -101,6 +110,40 @@ OUT_L[i] = capture_l + usb_l;
 OUT_R[i] = capture_r + usb_r;
 UsbComp::CommitCaptureBlock();
 ```
+
+The firmware sends analog input plus the 100 Hz test tone to USB capture. USB
+playback from the host is mixed into the analog outputs.
+
+Host validation:
+
+```bash
+aplay -l | grep -A1 'USB Composite Sample'
+arecord -l | grep -A1 'USB Composite Sample'
+```
+
+On this Pi the USB audio device appeared as `hw:3,0`. Record one second of the
+Daisy capture stream:
+
+```bash
+rm -f /tmp/basic-usb-capture.wav
+arecord -D hw:3,0 -f S16_LE -c 2 -r 48000 -d 1 /tmp/basic-usb-capture.wav
+ls -lh /tmp/basic-usb-capture.wav
+```
+
+Expected result:
+
+```text
+188K /tmp/basic-usb-capture.wav
+```
+
+Open one second of playback from the host to the Daisy:
+
+```bash
+speaker-test -D hw:3,0 -c 2 -r 48000 -F S16_LE -t sine -f 440 -l 1
+```
+
+A passing test opens the playback stream without ALSA errors. The current
+firmware mixes that USB playback stream into the analog outputs.
 
 ## USB MIDI In/Out
 
