@@ -88,6 +88,90 @@ Expected response:
 COMP CDC RX
 ```
 
+## BasicUsb.cpp Firmware Changes
+
+The `basic-usb` firmware has to call the shared `usb-comp` bridge from the app
+code. These are the firmware-side changes that make the enabled USB functions
+work.
+
+Include the bridge header:
+
+```cpp
+#include "usb-comp.h"
+```
+
+Initialize audio at the USB audio rate, use a 48-sample callback block, start
+the shared composite USB stack, then start the libDaisy audio callback:
+
+```cpp
+hw.Init();
+hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
+hw.SetAudioBlockSize(48);
+UsbComp::Init();
+hw.StartAudio(AudioCallback);
+```
+
+The audio callback is where analog audio, the test tone, USB capture, and USB
+playback are connected. For each sample:
+
+1. Create the local 100 Hz test tone.
+2. Mix analog input plus the test tone into `capture_l` / `capture_r`.
+3. Push that stereo pair into USB audio capture with `UsbComp::PushCapture()`.
+4. Pop one stereo frame of host playback with `UsbComp::PopPlayback()`.
+5. Mix host playback into the analog outputs.
+6. After the block finishes, call `UsbComp::CommitCaptureBlock()` so the USB
+   audio interface can see the new capture write pointer.
+
+```cpp
+void AudioCallback(AudioHandle::InputBuffer  in,
+                   AudioHandle::OutputBuffer out,
+                   size_t                    size)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        float signal = sinf(phase) * 0.5f;
+        phase += kSignalIncrement;
+        if(phase > M_TWOPI)
+            phase -= M_TWOPI;
+
+        const float capture_l = IN_L[i] + signal;
+        const float capture_r = IN_R[i] + signal;
+
+        UsbComp::PushCapture(capture_l, capture_r);
+
+        float usb_l;
+        float usb_r;
+        UsbComp::PopPlayback(usb_l, usb_r);
+
+        OUT_L[i] = capture_l + usb_l;
+        OUT_R[i] = capture_r + usb_r;
+    }
+
+    UsbComp::CommitCaptureBlock();
+}
+```
+
+The HID test is sent from the main loop. On the lit half of the LED cycle,
+`basic-usb` sends a short keyboard `A` press, then releases it:
+
+```cpp
+if(led_state)
+{
+    UsbComp::SetHidKeyA(true);
+    System::Delay(40);
+    UsbComp::SetHidKeyA(false);
+    System::Delay(460);
+}
+else
+{
+    System::Delay(500);
+}
+```
+
+MIDI in/out does not require a `BasicUsb.cpp` callback. `basic-usb` enables the
+MIDI class in the Makefile, and the shared `usb-comp.h` bridge handles incoming
+MIDI packets by echoing note-on/note-off messages back one semitone higher.
+
 ## USB Audio In/Out
 
 USB audio is enabled by adding the shared `usbd_audio.c` and `usbd_audio_if.c`
