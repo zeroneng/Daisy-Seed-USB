@@ -1,7 +1,7 @@
 TARGET = UsbComp
 
 LIBDAISY_DIR = ../../libDaisy
-ST_USB_DEVICE_DIR = ../vendor/stm32_mw_usb_device
+ST_USB_DEVICE_DIR = vendor/stm32_mw_usb_device
 USB_COMP_ENABLE_CDC ?= 1
 USB_COMP_ENABLE_HID ?= 1
 USB_COMP_ENABLE_AUDIO ?= 1
@@ -30,7 +30,7 @@ usbd_conf.c \
 usbd_desc.c \
 usb_comp_cdc_if.c \
 usbd_composite_builder.c \
-../usb-hid/usbd_hid_kbd.c \
+usbd_hid_kbd.c \
 $(ST_USB_DEVICE_DIR)/Core/Src/usbd_core.c \
 $(ST_USB_DEVICE_DIR)/Core/Src/usbd_ctlreq.c \
 $(ST_USB_DEVICE_DIR)/Core/Src/usbd_ioreq.c \
@@ -62,7 +62,7 @@ endif
 
 C_INCLUDES += \
 -I. \
--I../usb-hid/vendor/hid/Inc \
+-Ivendor/hid/Inc \
 -I$(ST_USB_DEVICE_DIR)/Core/Inc \
 -I$(ST_USB_DEVICE_DIR)/Class/CDC/Inc \
 -I$(ST_USB_DEVICE_DIR)/Class/HID/Inc \

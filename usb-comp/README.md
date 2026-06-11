@@ -274,19 +274,25 @@ application and then replace the test behaviors with your product behaviors.
    composite stack owns USB. CDC should be one class inside this composite
    device, not a second USB startup path.
 
-2. Copy the required USB source files.
+2. Copy the `usb-comp/` folder into your project.
 
-   At minimum, bring these into your project:
+   The folder is intended to be self-contained for the composite USB stack. It
+   includes the descriptors, composite builder, CDC/audio/MIDI/MSC class glue,
+   NKRO HID class file, and the ST USB Device middleware/vendor headers used by
+   the sample.
+
+   At minimum, keep these files in your copied `usb-comp/` folder:
 
    - `usbd_conf.c`
    - `usbd_desc.c` / `usbd_desc.h`
    - `usbd_composite_builder.c`
    - `usb_comp_cdc_if.c` / `usb_comp_cdc_if.h`
+   - `usb-comp.h` if you want the header-only integration bridge
+   - `usbd_hid_kbd.c`
    - enabled class files such as `usbd_audio*`, `usbd_midi*`, and `usbd_msc_storage*`
+   - `vendor/stm32_mw_usb_device/**`
+   - `vendor/hid/Inc/usbd_hid.h`
    - `UsbCompMscSdBackend.cpp` only if you need SD-backed MSC
-
-   Also include the local HID keyboard class from `../usb-hid/usbd_hid_kbd.c`
-   if you need NKRO keyboard support.
 
 3. Mirror the Makefile includes and definitions.
 
@@ -331,8 +337,10 @@ application and then replace the test behaviors with your product behaviors.
    ```make
    C_INCLUDES += \
      -Iusb \
+     -Iusb/vendor/hid/Inc \
      -I$(ST_USB_DEVICE_DIR)/Core/Inc \
      -I$(ST_USB_DEVICE_DIR)/Class/CDC/Inc \
+     -I$(ST_USB_DEVICE_DIR)/Class/HID/Inc \
      -I$(ST_USB_DEVICE_DIR)/Class/MSC/Inc \
      -I$(ST_USB_DEVICE_DIR)/Class/CompositeBuilder/Inc \
      -I$(LIBDAISY_DIR)/src/usbd

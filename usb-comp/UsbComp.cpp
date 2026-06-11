@@ -453,7 +453,6 @@ void AudioCallback(AudioHandle::InputBuffer in,
                    AudioHandle::OutputBuffer out,
                    size_t size)
 {
-    (void)in;
     for(size_t i = 0; i < size; i++)
     {
 #if USB_COMP_TEST_AUDIO
@@ -465,8 +464,13 @@ void AudioCallback(AudioHandle::InputBuffer in,
         float s = 0.0f;
 #endif
 
-        fifo_l[fifo_write_ptr] = s;
-        fifo_r[fifo_write_ptr] = s;
+        const float input_l = in[0][i];
+        const float input_r = in[1][i];
+        const float capture_l = input_l + s;
+        const float capture_r = input_r + s;
+
+        fifo_l[fifo_write_ptr] = capture_l;
+        fifo_r[fifo_write_ptr] = capture_r;
         fifo_write_ptr = (fifo_write_ptr + 1u) & kFifoRingMask;
 
         int16_t playback[2];
@@ -474,8 +478,8 @@ void AudioCallback(AudioHandle::InputBuffer in,
         float pl = static_cast<float>(playback[0]) / 32767.0f;
         float pr = static_cast<float>(playback[1]) / 32767.0f;
 
-        out[0][i] = s + pl;
-        out[1][i] = s + pr;
+        out[0][i] = capture_l + pl;
+        out[1][i] = capture_r + pr;
     }
     fifo_write_ptr_last = fifo_write_ptr;
 }
