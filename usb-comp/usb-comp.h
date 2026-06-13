@@ -8,23 +8,43 @@
 #include <stdint.h>
 
 #ifndef USB_COMP_ENABLE_CDC
+#ifdef USBD_CMPSIT_ACTIVATE_CDC
+#define USB_COMP_ENABLE_CDC USBD_CMPSIT_ACTIVATE_CDC
+#else
 #define USB_COMP_ENABLE_CDC 1
+#endif
 #endif
 
 #ifndef USB_COMP_ENABLE_HID
+#ifdef USBD_CMPSIT_ACTIVATE_HID
+#define USB_COMP_ENABLE_HID USBD_CMPSIT_ACTIVATE_HID
+#else
 #define USB_COMP_ENABLE_HID 1
+#endif
 #endif
 
 #ifndef USB_COMP_ENABLE_AUDIO
+#ifdef USBD_CMPSIT_ACTIVATE_AUDIO
+#define USB_COMP_ENABLE_AUDIO USBD_CMPSIT_ACTIVATE_AUDIO
+#else
 #define USB_COMP_ENABLE_AUDIO 1
+#endif
 #endif
 
 #ifndef USB_COMP_ENABLE_MIDI
+#ifdef USBD_CMPSIT_ACTIVATE_MIDI
+#define USB_COMP_ENABLE_MIDI USBD_CMPSIT_ACTIVATE_MIDI
+#else
 #define USB_COMP_ENABLE_MIDI 1
+#endif
 #endif
 
 #ifndef USB_COMP_ENABLE_MSC
+#ifdef USBD_CMPSIT_ACTIVATE_MSC
+#define USB_COMP_ENABLE_MSC USBD_CMPSIT_ACTIVATE_MSC
+#else
 #define USB_COMP_ENABLE_MSC 0
+#endif
 #endif
 
 extern "C" {
@@ -66,6 +86,20 @@ uint32_t USBD_CMPSIT_GetClassID(USBD_HandleTypeDef *pdev,
 #define DSY_RAM_D2 __attribute__((section(".heap")))
 #endif
 
+#ifndef USB_COMP_AUDIO_USE_SDRAM
+#define USB_COMP_AUDIO_USE_SDRAM 0
+#endif
+
+#if USB_COMP_AUDIO_USE_SDRAM
+#ifdef DSY_SDRAM_BSS
+#define USB_COMP_AUDIO_BUFFER_MEM DSY_SDRAM_BSS __attribute__((aligned(32)))
+#else
+#define USB_COMP_AUDIO_BUFFER_MEM __attribute__((section(".sdram_bss"), aligned(32)))
+#endif
+#else
+#define USB_COMP_AUDIO_BUFFER_MEM DSY_RAM_D2
+#endif
+
 namespace UsbComp
 {
 constexpr uint8_t kNoClass = 0xFFU;
@@ -88,11 +122,21 @@ static uint8_t hid_report[kNkroReportBytes] = {};
 static uint8_t audio_class_id = kNoClass;
 static uint8_t audio_ep_addr[] = {AUDIO_OUT_EP, AUDIO_IN_EP};
 
-constexpr uint32_t kAudioRingSize = 16384u;
+#ifndef USB_COMP_AUDIO_CAPTURE_RING_SIZE
+#define USB_COMP_AUDIO_CAPTURE_RING_SIZE 16384u
+#endif
+
+static_assert(USB_COMP_AUDIO_CAPTURE_RING_SIZE != 0u
+                  && ((USB_COMP_AUDIO_CAPTURE_RING_SIZE
+                       & (USB_COMP_AUDIO_CAPTURE_RING_SIZE - 1u))
+                      == 0u),
+              "USB_COMP_AUDIO_CAPTURE_RING_SIZE must be a power of two");
+
+constexpr uint32_t kAudioRingSize = USB_COMP_AUDIO_CAPTURE_RING_SIZE;
 constexpr uint32_t kAudioRingMask = kAudioRingSize - 1u;
 
-static float audio_fifo_l[kAudioRingSize] DSY_RAM_D2 = {};
-static float audio_fifo_r[kAudioRingSize] DSY_RAM_D2 = {};
+static float audio_fifo_l[kAudioRingSize] USB_COMP_AUDIO_BUFFER_MEM = {};
+static float audio_fifo_r[kAudioRingSize] USB_COMP_AUDIO_BUFFER_MEM = {};
 static uint32_t audio_fifo_write_ptr = 0u;
 static uint32_t audio_fifo_write_ptr_last = 0u;
 #endif
@@ -102,6 +146,8 @@ static uint8_t midi_class_id = kNoClass;
 static uint8_t midi_ep_addr[] = {MIDI_IN_EP, MIDI_OUT_EP};
 static uint8_t midi_rx_buffer[MIDI_DATA_FS_OUT_PACKET_SIZE] DSY_RAM_D2 = {};
 static uint8_t midi_tx_buffer[MIDI_USB_EVENT_PACKET_SIZE] DSY_RAM_D2 = {};
+static uint8_t midi_pending_packet[MIDI_USB_EVENT_PACKET_SIZE] = {};
+static volatile bool midi_tx_pending = false;
 
 static int8_t MidiInit();
 static int8_t MidiDeInit();
@@ -118,6 +164,16 @@ static USBD_MIDI_ItfTypeDef midi_fops = {
 
 static void Init()
 {
+#if USB_COMP_ENABLE_AUDIO
+    audio_fifo_write_ptr = 0u;
+    audio_fifo_write_ptr_last = 0u;
+    for(uint32_t i = 0; i < kAudioRingSize; i++)
+    {
+        audio_fifo_l[i] = 0.0f;
+        audio_fifo_r[i] = 0.0f;
+    }
+#endif
+
     USBD_Init(&hUsbDeviceHS, &HS_Desc, DEVICE_HS);
 
 #if USB_COMP_ENABLE_HID
@@ -258,6 +314,15 @@ static bool SetHidKeyA(bool) { return false; }
 #endif
 
 #if USB_COMP_ENABLE_MIDI
+static void QueueMidiPacket(uint8_t cin, uint8_t status, uint8_t data1, uint8_t data2)
+{
+    midi_pending_packet[0] = cin;
+    midi_pending_packet[1] = status;
+    midi_pending_packet[2] = data1;
+    midi_pending_packet[3] = data2;
+    midi_tx_pending = true;
+}
+
 static bool SendMidiPacket(uint8_t cin, uint8_t status, uint8_t data1, uint8_t data2)
 {
     if(midi_class_id == kNoClass)
@@ -274,6 +339,7 @@ static bool SendMidiPacket(uint8_t cin, uint8_t status, uint8_t data1, uint8_t d
 
 static int8_t MidiInit()
 {
+    midi_class_id = static_cast<uint8_t>(hUsbDeviceHS.classId);
     if(midi_class_id == kNoClass)
         return USBD_FAIL;
     return USBD_MIDI_SetRxBuffer(&hUsbDeviceHS, midi_rx_buffer, midi_class_id);
@@ -298,11 +364,11 @@ static int8_t MidiReceive(uint8_t* buf, uint32_t* len)
 
         if((cin == 0x09U) && ((status & 0xF0U) == 0x90U) && data2 != 0U)
         {
-            SendMidiPacket(0x09U, 0x90U, static_cast<uint8_t>(data1 + 1U), data2);
+            QueueMidiPacket(0x09U, 0x90U, static_cast<uint8_t>(data1 + 1U), data2);
         }
         else if((cin == 0x08U) || (((status & 0xF0U) == 0x80U) || (((status & 0xF0U) == 0x90U) && data2 == 0U)))
         {
-            SendMidiPacket(0x08U, 0x80U, static_cast<uint8_t>(data1 + 1U), 0U);
+            QueueMidiPacket(0x08U, 0x80U, static_cast<uint8_t>(data1 + 1U), 0U);
         }
     }
 
@@ -317,6 +383,20 @@ static int8_t MidiTransmitComplete(uint8_t* buf, uint32_t* len, uint8_t epnum)
     return USBD_OK;
 }
 #endif
+
+static void Process()
+{
+#if USB_COMP_ENABLE_MIDI
+    if(midi_tx_pending
+       && SendMidiPacket(midi_pending_packet[0],
+                         midi_pending_packet[1],
+                         midi_pending_packet[2],
+                         midi_pending_packet[3]))
+    {
+        midi_tx_pending = false;
+    }
+#endif
+}
 
 } // namespace UsbComp
 

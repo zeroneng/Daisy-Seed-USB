@@ -2,7 +2,11 @@
 #include <string.h>
 
 #ifndef USB_COMP_ENABLE_MSC
+#ifdef USBD_CMPSIT_ACTIVATE_MSC
+#define USB_COMP_ENABLE_MSC USBD_CMPSIT_ACTIVATE_MSC
+#else
 #define USB_COMP_ENABLE_MSC 0
+#endif
 #endif
 
 uint8_t UserRxBufferHS[APP_RX_DATA_SIZE];

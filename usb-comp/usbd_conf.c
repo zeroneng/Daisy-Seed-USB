@@ -18,6 +18,46 @@
 #include "usbd_def.h"
 #include "usbd_core.h"
 
+#ifndef USB_COMP_ENABLE_CDC
+#ifdef USBD_CMPSIT_ACTIVATE_CDC
+#define USB_COMP_ENABLE_CDC USBD_CMPSIT_ACTIVATE_CDC
+#else
+#define USB_COMP_ENABLE_CDC 1
+#endif
+#endif
+
+#ifndef USB_COMP_ENABLE_HID
+#ifdef USBD_CMPSIT_ACTIVATE_HID
+#define USB_COMP_ENABLE_HID USBD_CMPSIT_ACTIVATE_HID
+#else
+#define USB_COMP_ENABLE_HID 1
+#endif
+#endif
+
+#ifndef USB_COMP_ENABLE_AUDIO
+#ifdef USBD_CMPSIT_ACTIVATE_AUDIO
+#define USB_COMP_ENABLE_AUDIO USBD_CMPSIT_ACTIVATE_AUDIO
+#else
+#define USB_COMP_ENABLE_AUDIO 1
+#endif
+#endif
+
+#ifndef USB_COMP_ENABLE_MIDI
+#ifdef USBD_CMPSIT_ACTIVATE_MIDI
+#define USB_COMP_ENABLE_MIDI USBD_CMPSIT_ACTIVATE_MIDI
+#else
+#define USB_COMP_ENABLE_MIDI 1
+#endif
+#endif
+
+#ifndef USB_COMP_ENABLE_MSC
+#ifdef USBD_CMPSIT_ACTIVATE_MSC
+#define USB_COMP_ENABLE_MSC USBD_CMPSIT_ACTIVATE_MSC
+#else
+#define USB_COMP_ENABLE_MSC 0
+#endif
+#endif
+
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 PCD_HandleTypeDef hpcd_USB_OTG_HS;
 
@@ -237,19 +277,19 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
         /* FIFO allocation (in 32-bit words, total FS FIFO = 320 words = 1280 B):
              Rx FIFO   = 0x5C words — shared OUT/control receive FIFO
              TX0 FIFO  = 0x10 words — EP0 control
-             TX1 FIFO  = 0xA0 words — EP1 IN audio capture
+             TX1 FIFO  = 0x94 words — EP1 IN audio capture
              TX2 FIFO  = 0x10 words — CDC data IN
-             TX3 FIFO  = 0x04 words — CDC command IN
+             TX3 FIFO  = 0x10 words — MIDI data IN
              TX4 FIFO  = 0x10 words — HID keyboard IN
-             TX5 FIFO  = 0x10 words — MIDI data IN
+             TX5 FIFO  = 0x10 words — spare/currently unused
            Total used = 0x140 = 320 words. The larger Rx FIFO gives CDC, audio,
            and MIDI OUT transfers enough shared receive space.
         */
         HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x5C);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x10);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0xA0);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0x94);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 2, 0x10);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 3, 0x04);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 3, 0x10);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 4, 0x10);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 5, 0x10);
 #endif
@@ -279,7 +319,7 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 0, 0x40);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 1, 0xC0);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 2, 0x40);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 3, 0x08);
+        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 3, 0x10);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 4, 0x10);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 5, 0x10);
     }

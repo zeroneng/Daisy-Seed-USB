@@ -4,6 +4,10 @@
 
 using namespace daisy;
 
+#ifndef USB_COMP_TEST_HID
+#define USB_COMP_TEST_HID 0
+#endif
+
 DaisySeed hw;
 
 const float kSignalIncrement = (M_TWOPI * 100.0f) * (1.0f / 48000.0f);
@@ -49,7 +53,9 @@ int main()
 
     while(true)
     {
+        UsbComp::Process();
         hw.SetLed(led_state);
+#if USB_COMP_TEST_HID
         if(led_state)
         {
             UsbComp::SetHidKeyA(true);
@@ -61,6 +67,9 @@ int main()
         {
             System::Delay(500);
         }
+#else
+        System::Delay(500);
+#endif
         led_state = !led_state;
     }
 }

@@ -1,11 +1,15 @@
 # usb-cdc - Porting Notes
 
-This project is a **known-good external USB CDC example** for Daisy Seed / STM32H750.
-It was verified to:
+This project is a standalone external USB CDC example for Daisy Seed /
+STM32H750. Historical validation on the Pi/Daisy setup showed it can:
+
 - build successfully on the Pi host
 - flash successfully to the Daisy target
 - enumerate as a CDC ACM serial device on the **external USB port**
 - transmit test strings like `LED: ON` / `LED: OFF`
+
+Re-run build, flash, and host enumeration checks after libDaisy or USB middleware
+changes before treating it as a current known-good baseline.
 
 This README explains how to port the working CDC path into another application.
 

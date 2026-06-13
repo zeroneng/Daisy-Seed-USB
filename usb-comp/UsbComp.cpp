@@ -109,6 +109,20 @@ constexpr uint8_t kNoClass = 0xFFU;
 #define DSY_RAM_D2 __attribute__((section(".heap")))
 #endif
 
+#ifndef USB_COMP_AUDIO_USE_SDRAM
+#define USB_COMP_AUDIO_USE_SDRAM 0
+#endif
+
+#if USB_COMP_AUDIO_USE_SDRAM
+#ifdef DSY_SDRAM_BSS
+#define USB_COMP_AUDIO_BUFFER_MEM DSY_SDRAM_BSS __attribute__((aligned(32)))
+#else
+#define USB_COMP_AUDIO_BUFFER_MEM __attribute__((section(".sdram_bss"), aligned(32)))
+#endif
+#else
+#define USB_COMP_AUDIO_BUFFER_MEM DSY_RAM_D2
+#endif
+
 #if USB_COMP_ENABLE_HID
 constexpr uint8_t kNkroReportBytes = 33;
 #if USB_COMP_TEST_HID
@@ -149,10 +163,20 @@ uint8_t cdc_ep_addr[] = {0x82U, 0x02U, 0x86U};
 #if USB_COMP_ENABLE_AUDIO
 uint8_t audio_ep_addr[] = {AUDIO_OUT_EP, AUDIO_IN_EP};
 
-constexpr uint32_t kFifoRingSize = 16384u;
+#ifndef USB_COMP_AUDIO_CAPTURE_RING_SIZE
+#define USB_COMP_AUDIO_CAPTURE_RING_SIZE 16384u
+#endif
+
+static_assert(USB_COMP_AUDIO_CAPTURE_RING_SIZE != 0u
+                  && ((USB_COMP_AUDIO_CAPTURE_RING_SIZE
+                       & (USB_COMP_AUDIO_CAPTURE_RING_SIZE - 1u))
+                      == 0u),
+              "USB_COMP_AUDIO_CAPTURE_RING_SIZE must be a power of two");
+
+constexpr uint32_t kFifoRingSize = USB_COMP_AUDIO_CAPTURE_RING_SIZE;
 constexpr uint32_t kFifoRingMask = kFifoRingSize - 1u;
-float fifo_l[kFifoRingSize] DSY_RAM_D2;
-float fifo_r[kFifoRingSize] DSY_RAM_D2;
+float fifo_l[kFifoRingSize] USB_COMP_AUDIO_BUFFER_MEM;
+float fifo_r[kFifoRingSize] USB_COMP_AUDIO_BUFFER_MEM;
 uint32_t fifo_write_ptr = 0u;
 uint32_t fifo_write_ptr_last = 0u;
 float phase = 0.0f;

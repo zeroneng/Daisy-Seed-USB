@@ -9,8 +9,8 @@ TinyUSB.
 
 ## What This Project Proves
 
-This project proves that the following stack works on the Pi/Daisy setup used
-for development:
+This project is the current reference for the following stack on the Daisy Seed
+external USB connector:
 
 - Daisy Seed / STM32H750 external USB connector
 - ST USB Device composite stack
@@ -517,14 +517,20 @@ another interface is resetting the device.
   work.
 - Do not bypass libDaisy-facing SD APIs in the `usb-comp` app/backend path.
 
-## Known-Good Status
+## Validation Status
 
-Validated on the Pi/Daisy setup:
+Historical validation on the Pi/Daisy setup has included:
 
 - CDC + HID + audio + MIDI with MSC disabled
 - MIDI + MSC with audio DMA not running
 - SD-backed MSC runtime enable after boot
 - MSC-only SD reads with 4-bit libDaisy SD configuration
+
+After project cleanup on 2026-06-13, `usb-comp` and `basic-usb` still build
+from the kept project-local vendor folders:
+
+- `usb-comp/vendor`
+- `usb-hid/vendor`
 
 Not yet claimed:
 

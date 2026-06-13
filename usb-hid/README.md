@@ -211,7 +211,8 @@ Required build addition:
 Expected libDaisy dependency:
 
 - use the existing ST HID support already present in libDaisy
-- no libDaisy source patch should be required for this path
+- apply the local `../libdaisy-patch/src/hid/usb.cpp` change, or otherwise make
+  libDaisy's default FS USB IRQ handlers weak
 
 ## Important limitation
 
@@ -236,5 +237,9 @@ If you want active HID behavior, add it explicitly in the target project or behi
 ## Notes
 
 This folder is useful for validating report-based USB device behavior rather than serial/audio/storage behavior.
+
+If the weak IRQ handler patch is not applied to the active libDaisy tree, this
+project can fail at link with duplicate `OTG_FS_*IRQHandler` definitions between
+`usb_irq_override.c` and libDaisy's `src/hid/usb.cpp`.
 
 Small maintenance note: after changes, prefer verifying build, flash, and host HID enumeration as a quick sanity pass.
