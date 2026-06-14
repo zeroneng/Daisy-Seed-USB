@@ -12,8 +12,8 @@ Minimal Daisy Seed blink plus audio callback app.
 - Sends analog input plus the 100 Hz test tone to USB audio capture.
 - Mixes USB audio playback into the analog outputs.
 - Echoes incoming USB MIDI note messages back out one semitone higher.
-- Registers a USB HID keyboard interface, with the firmware-generated key tap
-  test disabled by default.
+- Registers a USB HID keyboard interface and sends a firmware-generated `A` key
+  tap by default so HID can be validated from the host.
 - Builds as a normal internal-flash app by default.
 
 ## Exact CDC Bring-Up Steps
@@ -167,8 +167,8 @@ void AudioCallback(AudioHandle::InputBuffer  in,
 ```
 
 The optional HID self-test is controlled by `USB_COMP_TEST_HID`. With the
-default `example-comp` build it is set to `0`, so the main loop only blinks the
-LED and does not send keyboard reports:
+default `example-comp` build it is set to `1`, so the main loop blinks the LED
+and sends an `A` key press/release on each on-state:
 
 ```cpp
 #if USB_COMP_TEST_HID
@@ -234,13 +234,17 @@ backward compatibility, but `example-comp` validates the smaller SRAM-friendly
 setting:
 
 ```make
--DUSB_COMP_AUDIO_CAPTURE_RING_SIZE=4096
+-DUSB_COMP_AUDIO_CAPTURE_RING_SIZE=64
 -DUSB_COMP_AUDIO_USE_SDRAM=1
 ```
 
 The ring stores left and right channels as `float`, so `16384` frames uses
-128 KB. The `4096` frame setting uses 32 KB and saves 96 KB of SRAM. Keep the
-value a power of two because the bridge uses a ring mask for wrapping.
+128 KB. The `64` frame setting is the smallest sane power-of-two size above one
+48-frame USB/audio block and uses only 512 bytes. Keep the value a power of two
+because the bridge uses a ring mask for wrapping.
+The USB audio packet sent to the host is still 48 stereo frames, or 192 bytes,
+per 1 ms USB audio interval; this setting only controls the internal capture
+ring depth.
 `USB_COMP_AUDIO_USE_SDRAM=1` moves that capture ring from the normal SRAM-backed
 `.heap` section to `.sdram_bss`, which keeps the app's 512 KB SRAM budget clear.
 When libDaisy provides `DSY_SDRAM_BSS`, the bridge uses that macro and adds
@@ -343,17 +347,17 @@ vendored HID include path, and enabling the HID composite flags:
 $(USB_COMP_DIR)/usbd_hid_kbd.c
 -I$(USB_COMP_DIR)/vendor/hid/Inc
 -DUSBD_CMPSIT_ACTIVATE_HID=1
--DUSB_COMP_TEST_HID=0
+-DUSB_COMP_TEST_HID=1
 -DHID_FS_BINTERVAL=0x01U
 ```
 
 The shared `usb-comp.h` bridge stores a 33-byte NKRO keyboard report, exposes
 `UsbComp::SetHidKeyA(bool pressed)`, and sends reports through
-`USBD_HID_SendReport()`. The current `example-comp` default does not call it from
-the main loop because `USB_COMP_TEST_HID=0`.
+`USBD_HID_SendReport()`. The current `example-comp` default calls it from the
+main loop because `USB_COMP_TEST_HID=1`.
 
-To intentionally re-enable the firmware-generated `A` tap test, set
-`USB_COMP_TEST_HID=1` and use the guarded main-loop test block:
+To keep the HID keyboard interface present but stop firmware-generated key taps,
+set `USB_COMP_TEST_HID=0`.
 
 ```cpp
 #if USB_COMP_TEST_HID
@@ -369,8 +373,8 @@ Host validation:
 ls -l /dev/input/by-id | grep 'USB_Composite.*event-kbd'
 ```
 
-With `USB_COMP_TEST_HID=0`, validation should confirm that the keyboard event
-node exists and that no firmware-generated `KEY_A` press/release events appear
+With `USB_COMP_TEST_HID=1`, validation should confirm that the keyboard event
+node exists and that firmware-generated `KEY_A` press/release events appear
 during the observation window.
 
 Use the `/dev/input/event*` target from the `by-id` symlink:
@@ -404,6 +408,6 @@ PY
 Expected result:
 
 ```text
-key_a_press=False
-key_a_release=False
+key_a_press=True
+key_a_release=True
 ```
