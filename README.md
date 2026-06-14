@@ -7,11 +7,11 @@ on the Daisy Seed external USB port.
 
 ## Current Projects
 
-- `basic-usb` - QSPI bootloader app that reuses the shared `usb-comp` stack.
+- `basic-usb` - internal-flash app that reuses the shared `usb-comp` stack.
 - `usb-comp` - composite CDC, HID, audio, MIDI, and optional MSC reference.
 - `usb-cdc` - standalone CDC ACM reference.
 - `usb-hid` - standalone HID keyboard/reference path.
-- `libdaisy-patch` - local patch copy for the libDaisy USB IRQ handler change.
+- `libdaisy-patch` - reference patch copy for optional libDaisy USB IRQ handler changes.
 
 The removed standalone audio, MIDI, DFU, MSC, and top-level vendor experiments
 are not part of the active tree anymore. Recoverable copies were moved to the

@@ -1,7 +1,7 @@
 TARGET = BasicUsb
 
 # Boot Type
-APP_TYPE = BOOT_QSPI
+# APP_TYPE = BOOT_QSPI
 
 LIBDAISY_DIR = ../../libDaisy
 USB_COMP_DIR = ../usb-comp

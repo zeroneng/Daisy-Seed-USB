@@ -211,8 +211,8 @@ Required build addition:
 Expected libDaisy dependency:
 
 - use the existing ST HID support already present in libDaisy
-- apply the local `../libdaisy-patch/src/hid/usb.cpp` change, or otherwise make
-  libDaisy's default FS USB IRQ handlers weak
+- use the FS USB IRQ handlers provided by libDaisy; this sample no longer
+  compiles its old local `usb_irq_override.c` file by default
 
 ## Important limitation
 
@@ -222,11 +222,11 @@ The project must choose one device class path per build unless you intentionally
 
 ## Sample behavior
 
-The `UsbHid.cpp` sample is intentionally quiet after enumeration.
-It only blinks the onboard LED to show liveness and does not automatically type or emit test keystrokes.
-That keeps the sample cleaner as an import/reference base for another project.
+The `UsbHid.cpp` sample sends a repeating `A` key press/release so the host can
+validate real HID input events, not just enumeration.
 
-If you want active HID behavior, add it explicitly in the target project or behind a dedicated test path.
+If you import the reusable HID layer into another project, keep generated key
+events behind an explicit test path.
 
 ## Current sample settings
 
@@ -238,8 +238,8 @@ If you want active HID behavior, add it explicitly in the target project or behi
 
 This folder is useful for validating report-based USB device behavior rather than serial/audio/storage behavior.
 
-If the weak IRQ handler patch is not applied to the active libDaisy tree, this
-project can fail at link with duplicate `OTG_FS_*IRQHandler` definitions between
-`usb_irq_override.c` and libDaisy's `src/hid/usb.cpp`.
+The old `usb_irq_override.c` file is left in the folder as reference, but the
+Makefile does not compile it. Building both that file and libDaisy's FS USB IRQ
+handlers causes duplicate `OTG_FS_*IRQHandler` definitions.
 
 Small maintenance note: after changes, prefer verifying build, flash, and host HID enumeration as a quick sanity pass.

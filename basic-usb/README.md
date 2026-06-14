@@ -14,7 +14,7 @@ Minimal Daisy Seed blink plus audio callback app.
 - Echoes incoming USB MIDI note messages back out one semitone higher.
 - Registers a USB HID keyboard interface, with the firmware-generated key tap
   test disabled by default.
-- Builds as a Daisy bootloader QSPI app with `APP_TYPE = BOOT_QSPI`.
+- Builds as a normal internal-flash app by default.
 
 ## Exact CDC Bring-Up Steps
 
@@ -65,7 +65,7 @@ override.
 ```bash
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make clean
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make -j2
-PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make program-dfu
+PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make program
 ```
 
 8. Confirm the board enumerates:
@@ -193,33 +193,27 @@ MIDI class in the Makefile. The shared `usb-comp.h` bridge queues note-on and
 note-off echo responses from the USB MIDI receive callback, and the main loop
 flushes those responses from `UsbComp::Process()`.
 
-## QSPI Boot
+## Internal-Flash Build
 
-`basic-usb` is configured as a Daisy bootloader QSPI application:
-
-```make
-APP_TYPE = BOOT_QSPI
-```
-
-The standard libDaisy core Makefile maps that app type to:
+`basic-usb` currently builds as a normal internal-flash application. The
+Makefile keeps the old QSPI bootloader app setting commented out:
 
 ```make
-LDSCRIPT = $(LIBDAISY_DIR)/core/STM32H750IB_qspi.lds
-FLASH_ADDRESS = 0x90040000
-C_DEFS += -DBOOT_APP
+# APP_TYPE = BOOT_QSPI
 ```
 
-Use the bootloader programming path for this build:
+With `APP_TYPE` disabled, the standard libDaisy core Makefile uses the internal
+flash linker script and `make program` loads the app over STLINK:
 
 ```bash
 make clean
 make -j2
-make program-dfu
+make program
 ```
 
-`make program` is intentionally only for non-bootloader internal-flash builds.
-With `APP_TYPE = BOOT_QSPI`, use `program-dfu` after the Daisy bootloader is
-running.
+To return to a Daisy bootloader QSPI app later, uncomment `APP_TYPE = BOOT_QSPI`
+and use the bootloader DFU path (`make program-dfu`) after the Daisy bootloader
+is running.
 
 ## USB Audio In/Out
 

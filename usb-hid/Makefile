@@ -10,7 +10,7 @@ AR = arm-none-eabi-ar
 OBJCOPY = arm-none-eabi-objcopy
 
 MCU = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard
-C_DEFS = -DCORE_CM7 -DSTM32H750xx -DSTM32H750IB -DARM_MATH_CM7 -DHSE_VALUE=16000000 -DUSE_HAL_DRIVER -DUSE_FULL_LL_DRIVER -DFILEIO_ENABLE_FATFS_READER -DLIBDAISY_DISABLE_FS_USB_IRQ_HANDLERS -DHID_FS_BINTERVAL=0x01U
+C_DEFS = -DCORE_CM7 -DSTM32H750xx -DSTM32H750IB -DARM_MATH_CM7 -DHSE_VALUE=16000000 -DUSE_HAL_DRIVER -DUSE_FULL_LL_DRIVER -DFILEIO_ENABLE_FATFS_READER -DHID_FS_BINTERVAL=0x01U
 C_INCLUDES = \
 -Ivendor/hid/Inc \
 -I$(LIBDAISY_DIR) \
@@ -33,7 +33,7 @@ CPPFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti -fno-unwind-tables -fshort-enums 
 LDFLAGS = $(MCU) --specs=nano.specs --specs=nosys.specs -T$(LIBDAISY_DIR)/core/STM32H750IB_flash.lds -L$(LIBDAISY_DIR)/build -ldaisy -lc -lm -lnosys -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections -Wl,--print-memory-usage
 
 CPP_SOURCES = UsbHid.cpp HID.cpp
-C_SOURCES = usbd_conf.c usbd_desc.c usbd_hid_kbd.c usb_irq_override.c $(LIBDAISY_DIR)/core/startup_stm32h750xx.c
+C_SOURCES = usbd_conf.c usbd_desc.c usbd_hid_kbd.c $(LIBDAISY_DIR)/core/startup_stm32h750xx.c
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o))) $(addprefix $(BUILD_DIR)/,$(notdir $(CPP_SOURCES:.cpp=.o)))
 vpath %.c $(sort $(dir $(C_SOURCES)))
 vpath %.cpp $(sort $(dir $(CPP_SOURCES)))
