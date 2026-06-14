@@ -96,7 +96,6 @@ C_DEFS += \
 -DUSB_COMP_TEST_AUDIO=1 \
 -DUSB_COMP_TEST_MIDI=1 \
 -DUSB_COMP_AUDIO_START_ON_BOOT=1 \
--DUSB_COMP_AUDIO_USE_SDRAM=1 \
 -DHID_FS_BINTERVAL=0x01U
 ```
 
@@ -108,7 +107,7 @@ the shared `usb-comp` default of 64 stereo float frames.
 - Audio rate: 48 kHz
 - Audio block size: 48 samples
 - USB audio packet: 48 stereo frames / 192 bytes every 1 ms
-- Capture ring: 64 stereo float frames / 512 bytes in SDRAM
+- Capture ring: 64 stereo float frames / 512 bytes in SRAM
 
 ## Build And Flash
 

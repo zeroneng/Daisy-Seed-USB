@@ -80,7 +80,6 @@ C_DEFS += \
 -DUSB_COMP_TEST_AUDIO=0 \
 -DUSB_COMP_TEST_MIDI=0 \
 -DUSB_COMP_AUDIO_START_ON_BOOT=1 \
--DUSB_COMP_AUDIO_USE_SDRAM=1 \
 -DHID_FS_BINTERVAL=0x01U
 ```
 
@@ -124,7 +123,7 @@ Do not call `hw.StartLog(false)` for the same USB device after `UsbComp::Init()`
 - USB audio: 48 kHz, stereo, 16-bit
 - USB audio packet: 48 stereo frames / 192 bytes every 1 ms
 - Capture ring: 64 stereo float frames / 512 bytes
-- Capture ring storage: SDRAM by default
+- Capture ring storage: SRAM by default
 - Ring sizes must be powers of two
 - HID polling interval: 1 ms
 
