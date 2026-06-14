@@ -48,6 +48,22 @@ interfaces:
 - USB audio
 - USB MIDI
 
+Composite HID exposes the same general key-control surface as the standalone
+`usb-hid` sample, under the `UsbComp` namespace:
+
+```cpp
+UsbComp::SetHidKeyState(keycode, pressed);
+UsbComp::SendHidReport();
+UsbComp::ClearAllKeys();
+UsbComp::KeyOn(keycode);
+UsbComp::KeyOff(keycode);
+UsbComp::CharToKeycode(c);
+```
+
+For key matrices, call `SetHidKeyState()` for each scanned key and then call
+`SendHidReport()` once after the scan. `SetHidKeyA(bool)` remains as a small
+compatibility/test wrapper.
+
 MSC can be compiled in when needed. With SD-backed MSC, storage starts disabled
 by default and firmware can enable or disable it at runtime:
 

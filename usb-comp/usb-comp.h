@@ -116,6 +116,7 @@ constexpr uint8_t kHidKeyA = 0x04;
 static uint8_t hid_class_id = kNoClass;
 static uint8_t hid_ep_addr[] = {0x84U};
 static uint8_t hid_report[kNkroReportBytes] = {};
+static uint8_t hid_last_sent_report[kNkroReportBytes] = {};
 #endif
 
 #if USB_COMP_ENABLE_AUDIO
@@ -269,10 +270,27 @@ static bool SendCdc(const char*) { return false; }
 #endif
 
 #if USB_COMP_ENABLE_HID
-static void SetHidKeyState(uint8_t keycode, bool pressed)
+static bool HidReportChanged()
+{
+    for(uint8_t i = 0; i < kNkroReportBytes; i++)
+    {
+        if(hid_report[i] != hid_last_sent_report[i])
+            return true;
+    }
+
+    return false;
+}
+
+static void SaveHidReport()
+{
+    for(uint8_t i = 0; i < kNkroReportBytes; i++)
+        hid_last_sent_report[i] = hid_report[i];
+}
+
+static bool SetHidKeyState(uint8_t keycode, bool pressed)
 {
     if(keycode > 0xE7)
-        return;
+        return false;
 
     if(keycode >= 0xE0 && keycode <= 0xE7)
     {
@@ -281,12 +299,12 @@ static void SetHidKeyState(uint8_t keycode, bool pressed)
             hid_report[0] |= bit_mask;
         else
             hid_report[0] &= static_cast<uint8_t>(~bit_mask);
-        return;
+        return true;
     }
 
     const uint8_t byte_index = static_cast<uint8_t>(keycode >> 3);
     if(byte_index >= (kNkroReportBytes - kNkroBitmapOffset))
-        return;
+        return false;
 
     const uint8_t bit_mask = static_cast<uint8_t>(1U << (keycode & 0x07U));
     uint8_t& byte = hid_report[kNkroBitmapOffset + byte_index];
@@ -294,6 +312,7 @@ static void SetHidKeyState(uint8_t keycode, bool pressed)
         byte |= bit_mask;
     else
         byte &= static_cast<uint8_t>(~bit_mask);
+    return true;
 }
 
 static bool SendHidReport()
@@ -301,15 +320,85 @@ static bool SendHidReport()
     if(hid_class_id == kNoClass)
         return false;
 
-    return USBD_HID_SendReport(&hUsbDeviceHS, hid_report, sizeof(hid_report), hid_class_id) == USBD_OK;
+    if(!HidReportChanged())
+        return false;
+
+    if(USBD_HID_SendReport(&hUsbDeviceHS, hid_report, sizeof(hid_report), hid_class_id) != USBD_OK)
+        return false;
+
+    SaveHidReport();
+    return true;
+}
+
+static void ClearAllKeys()
+{
+    for(uint8_t i = 0; i < kNkroReportBytes; i++)
+        hid_report[i] = 0U;
+    SendHidReport();
+}
+
+static bool KeyOn(uint8_t keycode)
+{
+    const bool ok = SetHidKeyState(keycode, true);
+    if(ok)
+        SendHidReport();
+    return ok;
+}
+
+static bool KeyOff(uint8_t keycode)
+{
+    const bool ok = SetHidKeyState(keycode, false);
+    if(ok)
+        SendHidReport();
+    return ok;
+}
+
+static uint8_t CharToKeycode(char c)
+{
+    if(c >= 'a' && c <= 'z')
+        return static_cast<uint8_t>(0x04 + (c - 'a'));
+
+    if(c >= 'A' && c <= 'Z')
+        return static_cast<uint8_t>(0x04 + (c - 'A'));
+
+    if(c >= '1' && c <= '9')
+        return static_cast<uint8_t>(0x1E + (c - '1'));
+
+    switch(c)
+    {
+        case '0': return 0x27;
+        case '\n': return 0x28;
+        case '\r': return 0x28;
+        case 0x1B: return 0x29;
+        case '\b': return 0x2A;
+        case '\t': return 0x2B;
+        case ' ': return 0x2C;
+        case '-': return 0x2D;
+        case '=': return 0x2E;
+        case '[': return 0x2F;
+        case ']': return 0x30;
+        case '\\': return 0x31;
+        case ';': return 0x33;
+        case '\'': return 0x34;
+        case '`': return 0x35;
+        case ',': return 0x36;
+        case '.': return 0x37;
+        case '/': return 0x38;
+        default: return 0x00;
+    }
 }
 
 static bool SetHidKeyA(bool pressed)
 {
-    SetHidKeyState(kHidKeyA, pressed);
-    return SendHidReport();
+    return pressed ? KeyOn(kHidKeyA) : KeyOff(kHidKeyA);
 }
 #else
+static bool SetHidKeyState(uint8_t, bool) { return false; }
+static bool SendHidReport() { return false; }
+static void ClearAllKeys() {}
+static bool KeyOn(uint8_t) { return false; }
+static bool KeyOff(uint8_t) { return false; }
+static uint8_t CharToKeycode(char) { return 0U; }
 static bool SetHidKeyA(bool) { return false; }
 #endif
 

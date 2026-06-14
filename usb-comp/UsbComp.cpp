@@ -131,6 +131,7 @@ constexpr uint8_t kHidKeyA = 0x04;
 #endif
 
 uint8_t hid_report[kNkroReportBytes] = {0};
+uint8_t hid_last_sent_report[kNkroReportBytes] = {0};
 uint8_t hid_class_id = kNoClass;
 #endif
 
@@ -240,11 +241,28 @@ extern "C" uint32_t AudioFifo_GetRingMask(void)
 }
 #endif
 
-#if USB_COMP_ENABLE_HID && USB_COMP_TEST_HID
-void SetKeyState(uint8_t keycode, bool pressed)
+#if USB_COMP_ENABLE_HID
+bool HidReportChanged()
+{
+    for(uint8_t i = 0; i < kNkroReportBytes; i++)
+    {
+        if(hid_report[i] != hid_last_sent_report[i])
+            return true;
+    }
+
+    return false;
+}
+
+void SaveHidReport()
+{
+    for(uint8_t i = 0; i < kNkroReportBytes; i++)
+        hid_last_sent_report[i] = hid_report[i];
+}
+
+bool SetKeyState(uint8_t keycode, bool pressed)
 {
     if(keycode > 0xE7)
-        return;
+        return false;
 
     if(keycode >= 0xE0 && keycode <= 0xE7)
     {
@@ -253,12 +271,12 @@ void SetKeyState(uint8_t keycode, bool pressed)
             hid_report[0] |= bit_mask;
         else
             hid_report[0] &= static_cast<uint8_t>(~bit_mask);
-        return;
+        return true;
     }
 
     const uint8_t byte_index = static_cast<uint8_t>(keycode >> 3);
     if(byte_index >= (kNkroReportBytes - kNkroBitmapOffset))
-        return;
+        return false;
 
     const uint8_t bit_mask = static_cast<uint8_t>(1u << (keycode & 0x07u));
     uint8_t& byte = hid_report[kNkroBitmapOffset + byte_index];
@@ -266,6 +284,7 @@ void SetKeyState(uint8_t keycode, bool pressed)
         byte |= bit_mask;
     else
         byte &= static_cast<uint8_t>(~bit_mask);
+    return true;
 }
 #endif
 
@@ -323,14 +342,92 @@ bool SendCdcString(const char* s)
 #endif
 }
 
-void SendHidReport()
+bool SendHidReport()
 {
 #if USB_COMP_ENABLE_HID
     if(hid_class_id == kNoClass)
-        return;
+        return false;
 
-    USBD_HID_SendReport(&hUsbDeviceHS, hid_report, sizeof(hid_report), hid_class_id);
+    if(!HidReportChanged())
+        return false;
+
+    if(USBD_HID_SendReport(&hUsbDeviceHS, hid_report, sizeof(hid_report), hid_class_id) != USBD_OK)
+        return false;
+
+    SaveHidReport();
+    return true;
+#else
+    return false;
 #endif
+}
+
+void ClearAllKeys()
+{
+#if USB_COMP_ENABLE_HID
+    std::memset(hid_report, 0, sizeof(hid_report));
+    SendHidReport();
+#endif
+}
+
+bool KeyOn(uint8_t keycode)
+{
+#if USB_COMP_ENABLE_HID
+    const bool ok = SetKeyState(keycode, true);
+    if(ok)
+        SendHidReport();
+    return ok;
+#else
+    (void)keycode;
+    return false;
+#endif
+}
+
+bool KeyOff(uint8_t keycode)
+{
+#if USB_COMP_ENABLE_HID
+    const bool ok = SetKeyState(keycode, false);
+    if(ok)
+        SendHidReport();
+    return ok;
+#else
+    (void)keycode;
+    return false;
+#endif
+}
+
+uint8_t CharToKeycode(char c)
+{
+    if(c >= 'a' && c <= 'z')
+        return static_cast<uint8_t>(0x04 + (c - 'a'));
+
+    if(c >= 'A' && c <= 'Z')
+        return static_cast<uint8_t>(0x04 + (c - 'A'));
+
+    if(c >= '1' && c <= '9')
+        return static_cast<uint8_t>(0x1E + (c - '1'));
+
+    switch(c)
+    {
+        case '0': return 0x27;
+        case '\n': return 0x28;
+        case '\r': return 0x28;
+        case 0x1B: return 0x29;
+        case '\b': return 0x2A;
+        case '\t': return 0x2B;
+        case ' ': return 0x2C;
+        case '-': return 0x2D;
+        case '=': return 0x2E;
+        case '[': return 0x2F;
+        case ']': return 0x30;
+        case '\\': return 0x31;
+        case ';': return 0x33;
+        case '\'': return 0x34;
+        case '`': return 0x35;
+        case ',': return 0x36;
+        case '.': return 0x37;
+        case '/': return 0x38;
+        default: return 0x00;
+    }
 }
 
 void RunCdcTest(bool led)
@@ -370,12 +467,10 @@ void RunMscControl()
 void RunHidTest()
 {
 #if USB_COMP_ENABLE_HID && USB_COMP_TEST_HID
-    std::memset(hid_report, 0, sizeof(hid_report));
-    SetKeyState(kHidKeyA, true);
-    SendHidReport();
+    ClearAllKeys();
+    KeyOn(CharToKeycode('a'));
     System::Delay(40);
-    SetKeyState(kHidKeyA, false);
-    SendHidReport();
+    KeyOff(CharToKeycode('a'));
 #endif
 }
 
