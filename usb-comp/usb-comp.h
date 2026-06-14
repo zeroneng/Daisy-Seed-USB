@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include <cstring>
+
 #ifndef USB_COMP_ENABLE_CDC
 #ifdef USBD_CMPSIT_ACTIVATE_CDC
 #define USB_COMP_ENABLE_CDC USBD_CMPSIT_ACTIVATE_CDC
@@ -36,14 +38,6 @@
 #define USB_COMP_ENABLE_MIDI USBD_CMPSIT_ACTIVATE_MIDI
 #else
 #define USB_COMP_ENABLE_MIDI 1
-#endif
-#endif
-
-#ifndef USB_COMP_ENABLE_MSC
-#ifdef USBD_CMPSIT_ACTIVATE_MSC
-#define USB_COMP_ENABLE_MSC USBD_CMPSIT_ACTIVATE_MSC
-#else
-#define USB_COMP_ENABLE_MSC 0
 #endif
 #endif
 
@@ -124,7 +118,7 @@ static uint8_t audio_class_id = kNoClass;
 static uint8_t audio_ep_addr[] = {AUDIO_OUT_EP, AUDIO_IN_EP};
 
 #ifndef USB_COMP_AUDIO_CAPTURE_RING_SIZE
-#define USB_COMP_AUDIO_CAPTURE_RING_SIZE 16384u
+#define USB_COMP_AUDIO_CAPTURE_RING_SIZE 64u
 #endif
 
 static_assert(USB_COMP_AUDIO_CAPTURE_RING_SIZE != 0u
@@ -254,7 +248,7 @@ static void PopPlayback(float& left, float& right)
 #endif
 
 #if USB_COMP_ENABLE_CDC
-static bool SendCdc(const char* text)
+static inline bool SendCdc(const char* text)
 {
     if(text == nullptr || cdc_class_id == kNoClass || !USB_COMP_CDC_IsConnected())
         return false;
@@ -266,25 +260,18 @@ static bool SendCdc(const char* text)
     return CDC_Transmit_HS((uint8_t*)text, len) == USBD_OK;
 }
 #else
-static bool SendCdc(const char*) { return false; }
+static inline bool SendCdc(const char*) { return false; }
 #endif
 
 #if USB_COMP_ENABLE_HID
 static bool HidReportChanged()
 {
-    for(uint8_t i = 0; i < kNkroReportBytes; i++)
-    {
-        if(hid_report[i] != hid_last_sent_report[i])
-            return true;
-    }
-
-    return false;
+    return std::memcmp(hid_report, hid_last_sent_report, sizeof(hid_report)) != 0;
 }
 
 static void SaveHidReport()
 {
-    for(uint8_t i = 0; i < kNkroReportBytes; i++)
-        hid_last_sent_report[i] = hid_report[i];
+    std::memcpy(hid_last_sent_report, hid_report, sizeof(hid_report));
 }
 
 static bool SetHidKeyState(uint8_t keycode, bool pressed)
@@ -330,10 +317,9 @@ static bool SendHidReport()
     return true;
 }
 
-static void ClearAllKeys()
+static inline void ClearAllKeys()
 {
-    for(uint8_t i = 0; i < kNkroReportBytes; i++)
-        hid_report[i] = 0U;
+    std::memset(hid_report, 0, sizeof(hid_report));
     SendHidReport();
 }
 
@@ -353,7 +339,7 @@ static bool KeyOff(uint8_t keycode)
     return ok;
 }
 
-static uint8_t CharToKeycode(char c)
+static inline uint8_t CharToKeycode(char c)
 {
     if(c >= 'a' && c <= 'z')
         return static_cast<uint8_t>(0x04 + (c - 'a'));
@@ -395,10 +381,10 @@ static bool SetHidKeyA(bool pressed)
 #else
 static bool SetHidKeyState(uint8_t, bool) { return false; }
 static bool SendHidReport() { return false; }
-static void ClearAllKeys() {}
+static inline void ClearAllKeys() {}
 static bool KeyOn(uint8_t) { return false; }
 static bool KeyOff(uint8_t) { return false; }
-static uint8_t CharToKeycode(char) { return 0U; }
+static inline uint8_t CharToKeycode(char) { return 0U; }
 static bool SetHidKeyA(bool) { return false; }
 #endif
 

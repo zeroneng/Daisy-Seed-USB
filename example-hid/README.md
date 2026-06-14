@@ -1,38 +1,72 @@
 # example-hid
 
-Simple Daisy Seed blink app that reuses the standalone `usb-hid` helper stack.
+Minimal Daisy Seed app showing how to use `../usb-hid`.
 
-## What It Does
+It initializes Daisy, starts the HID keyboard stack, blinks the LED every
+500 ms, and sends a repeating `A` key tap by default for host validation.
 
-- Initializes the Daisy Seed.
-- Starts the USB HID keyboard device stack from `../usb-hid`.
-- Blinks the onboard LED every 500 ms.
-- Sends a repeating `A` key tap by default so the host can verify real HID
-  input events.
+## Files
 
-## Project Shape
-
-`example-hid` is intentionally small. The app-owned files are:
-
-- `ExampleHid.cpp`
-- `Makefile`
+- `ExampleHid.cpp` - tiny app using `HID.h`
+- `Makefile` - explicit `../usb-hid` source/include list
 - `README.md`
 
-The HID implementation is reused from `../usb-hid`:
+The HID implementation comes from `../usb-hid`; there is no extra `.mk` helper.
 
-- `HID.cpp`
-- `HID.h`
-- `usbd_conf.c`
-- `usbd_desc.c`
-- `usbd_hid_kbd.c`
-- `vendor/hid/Inc/usbd_hid.h`
+## App Steps
 
-The Makefile does not compile `../usb-hid/usb_irq_override.c`; libDaisy owns the
-FS USB IRQ handlers in the current tree.
+```cpp
+#include "daisy_seed.h"
+#include "HID.h"
+
+DaisySeed hw;
+
+int main()
+{
+    hw.Init();
+    UsbHid_Init();
+    UsbHid_ClearAllKeys();
+
+    while(true)
+    {
+        hw.SetLed(true);
+        UsbHid_KeyOn(UsbHid_CharToKeycode('a'));
+        System::Delay(40);
+        UsbHid_KeyOff(UsbHid_CharToKeycode('a'));
+
+        hw.SetLed(false);
+        System::Delay(460);
+    }
+}
+```
+
+For product code, keep generated key events behind `EXAMPLE_HID_TEST_KEYS` or a
+real input condition.
+
+## Makefile Steps
+
+```make
+USB_HID_DIR = ../usb-hid
+
+C_SOURCES += \
+$(USB_HID_DIR)/usbd_conf.c \
+$(USB_HID_DIR)/usbd_desc.c \
+$(USB_HID_DIR)/usbd_hid_kbd.c
+
+CPP_SOURCES += \
+$(USB_HID_DIR)/HID.cpp
+
+C_INCLUDES += \
+-I$(USB_HID_DIR) \
+-I$(USB_HID_DIR)/vendor/hid/Inc
+
+C_DEFS += \
+-DHID_FS_BINTERVAL=0x01U
+```
+
+Do not compile `usb_irq_override.c`; libDaisy owns the FS USB IRQ handlers.
 
 ## Build And Flash
-
-Use the Daisy-compatible ARM toolchain on this Pi:
 
 ```bash
 cd /mnt/clu-nas/developer/daisy-usb/example-hid
@@ -41,74 +75,17 @@ PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make -j2
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make program
 ```
 
-Expected flash result:
-
-```text
-** Verified OK **
-```
-
-## Host Validation
-
-Confirm USB enumeration:
+## Host Test
 
 ```bash
 lsusb | grep '0483:5751'
-```
-
-Expected device:
-
-```text
-STMicroelectronics USB HID Sample
-```
-
-Find the keyboard event node:
-
-```bash
 ls -l /dev/input/by-id | grep 'USB_HID_Sample.*event-kbd'
 ```
 
-Read a few HID key events:
+Read the event node and confirm `KEY_A` press/release events. Repeats
+(`KEY_A 2`) may appear while the key is held.
 
-```bash
-python3 - <<'PY'
-import glob, os, select, struct, time
-
-path = os.path.realpath(glob.glob('/dev/input/by-id/*USB_HID_Sample*event-kbd')[0])
-print(f'HID event: {path}')
-
-fmt = 'llHHI'
-size = struct.calcsize(fmt)
-fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
-seen = []
-try:
-    end = time.time() + 6
-    while time.time() < end and len(seen) < 4:
-        readable, _, _ = select.select([fd], [], [], 0.5)
-        if not readable:
-            continue
-        data = os.read(fd, size * 32)
-        for offset in range(0, len(data) - size + 1, size):
-            _, _, etype, code, value = struct.unpack(fmt, data[offset:offset + size])
-            if etype == 1 and code == 30:
-                seen.append(value)
-                print(f'KEY_A {value}')
-                if len(seen) >= 4:
-                    break
-finally:
-    os.close(fd)
-
-if 1 not in seen or 0 not in seen:
-    raise SystemExit(f'Missing KEY_A press/release pair: {seen}')
-PY
-```
-
-Expected output includes `KEY_A 1` and `KEY_A 0`. Some hosts may also report
-`KEY_A 2` repeats while the key is held.
-
-## Quiet Mode
-
-To keep the HID keyboard interface present but stop firmware-generated key taps,
-set the test flag to `0`:
+Quiet build with HID present but no generated key taps:
 
 ```bash
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH \
@@ -116,6 +93,3 @@ make clean
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH \
 make -j2 EXAMPLE_HID_TEST_KEYS=0
 ```
-
-For product code, prefer keeping generated HID events behind a dedicated test
-flag or input condition.

@@ -9,6 +9,8 @@ using namespace daisy;
 
 namespace {
 DaisySeed hw;
+
+#if EXAMPLE_HID_TEST_KEYS
 constexpr char kTestChar = 'a';
 
 void SendTestKeyTap()
@@ -21,6 +23,7 @@ void SendTestKeyTap()
     System::Delay(40);
     UsbHid_KeyOff(keycode);
 }
+#endif
 } // namespace
 
 int main(void)

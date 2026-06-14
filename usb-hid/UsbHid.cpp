@@ -20,12 +20,10 @@ void SendATest()
     if(keycode == 0x00)
         return;
 
-    UsbHid_SetKeyState(keycode, true);
-    UsbHid_SendReport();
+    UsbHid_KeyOn(keycode);
     BlinkOnce(80);
     System::Delay(200);
-    UsbHid_SetKeyState(keycode, false);
-    UsbHid_SendReport();
+    UsbHid_KeyOff(keycode);
     System::Delay(800);
 }
 } // namespace

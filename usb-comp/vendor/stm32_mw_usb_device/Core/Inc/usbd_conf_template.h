@@ -58,9 +58,6 @@ extern "C" {
 #define USBD_CLASS_BOS_ENABLED                      1U
 #define USB_BB_MAX_NUM_ALT_MODE                     0x2U
 
-/* MSC Class Config */
-#define MSC_MEDIA_PACKET                            8192U
-
 /* CDC Class Config */
 #define USBD_CDC_INTERVAL                           2000U
 

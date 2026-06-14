@@ -1,14 +1,6 @@
 #include "usb_comp_cdc_if.h"
 #include <string.h>
 
-#ifndef USB_COMP_ENABLE_MSC
-#ifdef USBD_CMPSIT_ACTIVATE_MSC
-#define USB_COMP_ENABLE_MSC USBD_CMPSIT_ACTIVATE_MSC
-#else
-#define USB_COMP_ENABLE_MSC 0
-#endif
-#endif
-
 uint8_t UserRxBufferHS[APP_RX_DATA_SIZE];
 uint8_t UserTxBufferHS[APP_TX_DATA_SIZE];
 uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
@@ -18,7 +10,6 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 
 static uint8_t cdc_class_id_hs = 0;
 static volatile uint8_t cdc_connected_hs = 0;
-static volatile uint8_t msc_command_hs = 0;
 static CDC_ReceiveCallback rx_callback_hs = 0;
 static void dummy_rx_callback(uint8_t* buf, uint32_t* len)
 {
@@ -63,13 +54,6 @@ void USB_COMP_CDC_SetClassId(uint8_t class_id)
 uint8_t USB_COMP_CDC_IsConnected(void)
 {
     return cdc_connected_hs;
-}
-
-uint8_t USB_COMP_CDC_TakeMscCommand(void)
-{
-    uint8_t command = msc_command_hs;
-    msc_command_hs = 0U;
-    return command;
 }
 
 void CDC_Set_Rx_Callback_HS(CDC_ReceiveCallback cb)
@@ -117,19 +101,6 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_HS_Int(uint8_t* pbuf, uint32_t* Len)
 {
     cdc_connected_hs = 1U;
-#if USB_COMP_ENABLE_MSC
-    if(pbuf && Len && *Len > 0U)
-    {
-        /* Queue only a tiny command marker from the USB RX callback.  MSC
-           enable may initialize SD media, so UsbComp.cpp consumes this marker
-           later from the main loop. */
-        for(uint32_t i = 0; i < *Len; ++i)
-        {
-            if(pbuf[i] == 'M' || pbuf[i] == 'm' || pbuf[i] == 'S')
-                msc_command_hs = pbuf[i];
-        }
-    }
-#endif
 #if USB_COMP_TEST_CDC
     if(Len && *Len > 0U)
     {

@@ -45,59 +45,9 @@ void UsbHid_ClearAllKeys(void)
     UsbHid_SendReport();
 }
 
-/* Old boot-style 6-key rollover implementation kept for reference.
-bool UsbHid_KeyOn(uint8_t keycode)
-{
-    if(keycode == 0x00)
-        return false;
-
-    for(int i = 2; i < 8; ++i)
-    {
-        if(hid_report[i] == keycode)
-        {
-            UsbHid_SendReport();
-            return true;
-        }
-    }
-
-    for(int i = 2; i < 8; ++i)
-    {
-        if(hid_report[i] == 0x00)
-        {
-            hid_report[i] = keycode;
-            UsbHid_SendReport();
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool UsbHid_KeyOff(uint8_t keycode)
-{
-    if(keycode == 0x00)
-        return false;
-
-    bool changed = false;
-    for(int i = 2; i < 8; ++i)
-    {
-        if(hid_report[i] == keycode)
-        {
-            hid_report[i] = 0x00;
-            changed       = true;
-        }
-    }
-
-    if(changed)
-        UsbHid_SendReport();
-
-    return changed;
-}
-*/
-
 bool UsbHid_SetKeyState(uint8_t keycode, bool pressed)
 {
-    if(keycode > 0xE7)
+    if(keycode == 0x00 || keycode > 0xE7)
         return false;
 
     if(keycode >= 0xE0 && keycode <= 0xE7)
@@ -172,5 +122,4 @@ uint8_t UsbHid_CharToKeycode(char c)
         default: return 0x00;
     }
 }
-
 

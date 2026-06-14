@@ -50,14 +50,6 @@
 #endif
 #endif
 
-#ifndef USB_COMP_ENABLE_MSC
-#ifdef USBD_CMPSIT_ACTIVATE_MSC
-#define USB_COMP_ENABLE_MSC USBD_CMPSIT_ACTIVATE_MSC
-#else
-#define USB_COMP_ENABLE_MSC 0
-#endif
-#endif
-
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 PCD_HandleTypeDef hpcd_USB_OTG_HS;
 
@@ -92,7 +84,7 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef *pcdHandle)
 
         __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
 
-        /* Priority 0 so audio IRQs aren't delayed */
+        /* Keep USB interrupts below the audio IRQ priority. */
         HAL_NVIC_SetPriority(OTG_FS_EP1_OUT_IRQn, 2, 0);
         HAL_NVIC_EnableIRQ(OTG_FS_EP1_OUT_IRQn);
         HAL_NVIC_SetPriority(OTG_FS_EP1_IN_IRQn, 2, 0);
@@ -242,38 +234,6 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
 
         if(HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK) { Error_Handler(); }
 
-#if USB_COMP_ENABLE_MSC
-#if !USB_COMP_ENABLE_CDC && !USB_COMP_ENABLE_HID && !USB_COMP_ENABLE_AUDIO && !USB_COMP_ENABLE_MIDI
-        /* MSC-only mirrors the simpler standalone storage topology: EP1 gets
-           enough FIFO for bulk transfers without sharing space with audio,
-           MIDI, HID, or CDC. */
-        HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x80);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x40);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0x80);
-#else
-        /* Full composite FIFO allocation (320 words total):
-             Rx FIFO   = 0x4C words — shared OUT/control receive FIFO
-             TX0 FIFO  = 0x10 words — EP0 control
-             TX1 FIFO  = 0x30 words — audio capture IN
-             TX2 FIFO  = 0x10 words — CDC data IN
-             TX3 FIFO  = 0x04 words — MIDI data IN
-             TX4 FIFO  = 0x10 words — HID keyboard IN
-             TX5 FIFO  = 0x80 words — MSC bulk IN
-             TX6 FIFO  = 0x10 words — CDC notification IN
-           Total used = 0x140 = 320 words.
-           Keep EP6 for CDC notification only; testing showed it is not a
-           trustworthy real-data endpoint for MSC or MIDI in this setup.
-        */
-        HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_FS, 0x4C);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 0, 0x10);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 1, 0x30);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 2, 0x10);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 3, 0x04);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 4, 0x10);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 5, 0x80);
-        HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 6, 0x10);
-#endif
-#else
         /* FIFO allocation (in 32-bit words, total FS FIFO = 320 words = 1280 B):
              Rx FIFO   = 0x5C words — shared OUT/control receive FIFO
              TX0 FIFO  = 0x10 words — EP0 control
@@ -292,7 +252,6 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 3, 0x10);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 4, 0x10);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_FS, 5, 0x10);
-#endif
     }
 
     if(pdev->id == DEVICE_HS)

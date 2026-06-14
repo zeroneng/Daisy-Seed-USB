@@ -31,10 +31,6 @@ extern "C" {
 #include "usbd_hid.h"
 #endif /* USBD_CMPSIT_ACTIVATE_HID */
 
-#if USBD_CMPSIT_ACTIVATE_MSC == 1U
-#include "usbd_msc.h"
-#endif /* USBD_CMPSIT_ACTIVATE_MSC */
-
 #if USBD_CMPSIT_ACTIVATE_CDC == 1U
 #include "usbd_cdc.h"
 #endif /* USBD_CMPSIT_ACTIVATE_CDC */
@@ -89,10 +85,6 @@ extern "C" {
 #ifndef USBD_CMPSIT_ACTIVATE_HID
 #define USBD_CMPSIT_ACTIVATE_HID                           0U
 #endif /* USBD_CMPSIT_ACTIVATE_HID */
-
-#ifndef USBD_CMPSIT_ACTIVATE_MSC
-#define USBD_CMPSIT_ACTIVATE_MSC                           0U
-#endif /* USBD_CMPSIT_ACTIVATE_MSC */
 
 #ifndef USBD_CMPSIT_ACTIVATE_DFU
 #define USBD_CMPSIT_ACTIVATE_DFU                           0U

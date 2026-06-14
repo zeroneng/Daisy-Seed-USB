@@ -1,256 +1,51 @@
 # example-comp
 
-Minimal Daisy Seed blink plus audio callback app.
+Minimal Daisy Seed app using `../usb-comp`.
 
-- Initializes the Daisy Seed.
-- Toggles the onboard LED every 500 ms.
-- Result: one full blink cycle per second.
-- Starts a libDaisy audio callback.
-- Outputs a 100 Hz sine tone on left and right audio outputs.
-- Passes line input straight to the matching output channel.
-- Starts the shared `usb-comp` USB stack with CDC, HID, USB audio, and MIDI enabled.
-- Sends analog input plus the 100 Hz test tone to USB audio capture.
-- Mixes USB audio playback into the analog outputs.
-- Echoes incoming USB MIDI note messages back out one semitone higher.
-- Registers a USB HID keyboard interface and sends a firmware-generated `A` key
-  tap by default so HID can be validated from the host.
-- Builds as a normal internal-flash app by default.
+It blinks the LED, runs a 48 kHz audio callback, starts composite USB, sends a
+100 Hz test tone to analog and USB audio capture, mixes USB playback into analog
+output, echoes MIDI notes one semitone higher, and sends a repeating HID `A`
+key tap by default.
 
-## Exact CDC Bring-Up Steps
+USB profile:
 
-1. Keep `example-comp` as the application folder and reuse the shared sources from `../usb-comp`.
-2. Include the bridge header in `ExampleComp.cpp`:
+- CDC ACM serial
+- NKRO HID keyboard
+- USB audio capture/playback
+- USB MIDI
+
+## Files
+
+- `ExampleComp.cpp` - small app using `usb-comp.h`
+- `Makefile` - explicit `../usb-comp` source/include list
+- `README.md`
+
+## App Steps
 
 ```cpp
+#include "daisy_seed.h"
 #include "usb-comp.h"
-```
 
-3. Initialize the Daisy Seed, set the USB/audio callback rate, then start the shared USB stack before audio starts:
+DaisySeed hw;
 
-```cpp
-hw.Init();
-hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-hw.SetAudioBlockSize(48);
-UsbComp::Init();
-hw.StartAudio(AudioCallback);
-```
-
-4. Compile the shared USB core, descriptor, composite builder, CDC interface, and CDC class sources from `../usb-comp` and its vendored ST USB Device tree.
-5. Add these include paths before the shared standalone makefile is included:
-
-```make
--I$(USB_COMP_DIR)
--I$(ST_USB_DEVICE_DIR)/Core/Inc
--I$(ST_USB_DEVICE_DIR)/Class/CDC/Inc
--I$(ST_USB_DEVICE_DIR)/Class/CompositeBuilder/Inc
-```
-
-6. For CDC-only bring-up, use these feature flags:
-
-```make
--DUSBD_CMPSIT_ACTIVATE_CDC=1
--DUSBD_CMPSIT_ACTIVATE_HID=0
--DUSBD_CMPSIT_ACTIVATE_AUDIO=0
--DUSBD_CMPSIT_ACTIVATE_MIDI=0
--DUSBD_CMPSIT_ACTIVATE_MSC=0
-```
-
-The shared `usb-comp` bridge derives its `USB_COMP_ENABLE_*` gates from the
-matching `USBD_CMPSIT_ACTIVATE_*` values, so application Makefiles only need to
-define the `USBD_CMPSIT_ACTIVATE_*` set unless they intentionally need an
-override.
-
-7. Build and flash:
-
-```bash
-PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make clean
-PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make -j2
-PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make program
-```
-
-8. Confirm the board enumerates:
-
-```bash
-lsusb | grep '0483:5764'
-ls -l /dev/serial/by-id | grep 'USB_Composite'
-```
-
-9. Confirm CDC data works:
-
-```bash
-stty -F /dev/ttyACM1 115200 raw -echo -echoe -echok
-timeout 3 cat /dev/ttyACM1 > /tmp/example-comp-cdc.out &
-printf 'x' > /dev/ttyACM1
-cat /tmp/example-comp-cdc.out
-```
-
-Expected response:
-
-```text
-COMP CDC RX
-```
-
-## ExampleComp.cpp Firmware Changes
-
-The `example-comp` firmware has to call the shared `usb-comp` bridge from the app
-code. These are the firmware-side changes that make the enabled USB functions
-work.
-
-Include the bridge header:
-
-```cpp
-#include "usb-comp.h"
-```
-
-Initialize audio at the USB audio rate, use a 48-sample callback block, start
-the shared composite USB stack, then start the libDaisy audio callback:
-
-```cpp
-hw.Init();
-hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-hw.SetAudioBlockSize(48);
-UsbComp::Init();
-hw.StartAudio(AudioCallback);
-```
-
-The main loop calls `UsbComp::Process()` before the LED delay. This gives the
-shared bridge a foreground place to flush queued USB work, including the MIDI
-echo response queued by the USB OUT callback:
-
-```cpp
-while(true)
+int main()
 {
-    UsbComp::Process();
-    hw.SetLed(led_state);
-    ...
-}
-```
+    hw.Init();
+    hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
+    hw.SetAudioBlockSize(48);
 
-The audio callback is where analog audio, the test tone, USB capture, and USB
-playback are connected. For each sample:
+    UsbComp::Init();
+    hw.StartAudio(AudioCallback);
 
-1. Create the local 100 Hz test tone.
-2. Mix analog input plus the test tone into `capture_l` / `capture_r`.
-3. Push that stereo pair into USB audio capture with `UsbComp::PushCapture()`.
-4. Pop one stereo frame of host playback with `UsbComp::PopPlayback()`.
-5. Mix host playback into the analog outputs.
-6. After the block finishes, call `UsbComp::CommitCaptureBlock()` so the USB
-   audio interface can see the new capture write pointer.
-
-```cpp
-void AudioCallback(AudioHandle::InputBuffer  in,
-                   AudioHandle::OutputBuffer out,
-                   size_t                    size)
-{
-    for(size_t i = 0; i < size; i++)
+    while(true)
     {
-        float signal = sinf(phase) * 0.5f;
-        phase += kSignalIncrement;
-        if(phase > M_TWOPI)
-            phase -= M_TWOPI;
-
-        const float capture_l = IN_L[i] + signal;
-        const float capture_r = IN_R[i] + signal;
-
-        UsbComp::PushCapture(capture_l, capture_r);
-
-        float usb_l;
-        float usb_r;
-        UsbComp::PopPlayback(usb_l, usb_r);
-
-        OUT_L[i] = capture_l + usb_l;
-        OUT_R[i] = capture_r + usb_r;
+        UsbComp::Process();
+        System::Delay(1);
     }
-
-    UsbComp::CommitCaptureBlock();
 }
 ```
 
-The optional HID self-test is controlled by `USB_COMP_TEST_HID`. With the
-default `example-comp` build it is set to `1`, so the main loop blinks the LED
-and sends an `A` key press/release on each on-state:
-
-```cpp
-#if USB_COMP_TEST_HID
-if(led_state)
-{
-    UsbComp::SetHidKeyA(true);
-    System::Delay(40);
-    UsbComp::SetHidKeyA(false);
-    System::Delay(460);
-}
-else
-{
-    System::Delay(500);
-}
-#else
-System::Delay(500);
-#endif
-```
-
-MIDI in/out does not require a libDaisy audio callback. `example-comp` enables the
-MIDI class in the Makefile. The shared `usb-comp.h` bridge queues note-on and
-note-off echo responses from the USB MIDI receive callback, and the main loop
-flushes those responses from `UsbComp::Process()`.
-
-## Internal-Flash Build
-
-`example-comp` currently builds as a normal internal-flash application. The
-Makefile keeps the old QSPI bootloader app setting commented out:
-
-```make
-# APP_TYPE = BOOT_QSPI
-```
-
-With `APP_TYPE` disabled, the standard libDaisy core Makefile uses the internal
-flash linker script and `make program` loads the app over STLINK:
-
-```bash
-make clean
-make -j2
-make program
-```
-
-To return to a Daisy bootloader QSPI app later, uncomment `APP_TYPE = BOOT_QSPI`
-and use the bootloader DFU path (`make program-dfu`) after the Daisy bootloader
-is running.
-
-## USB Audio In/Out
-
-USB audio is enabled by adding the shared `usbd_audio.c` and `usbd_audio_if.c`
-sources, enabling the audio composite flag, and using the `UsbComp` audio
-bridge inside `AudioCallback()`:
-
-```make
-$(USB_COMP_DIR)/usbd_audio.c
-$(USB_COMP_DIR)/usbd_audio_if.c
--DUSBD_CMPSIT_ACTIVATE_AUDIO=1
--DUSB_COMP_TEST_AUDIO=1
--DUSB_COMP_AUDIO_START_ON_BOOT=1
-```
-
-The USB capture ring defaults to `16384` stereo frames in the shared bridge for
-backward compatibility, but `example-comp` validates the smaller SRAM-friendly
-setting:
-
-```make
--DUSB_COMP_AUDIO_CAPTURE_RING_SIZE=64
--DUSB_COMP_AUDIO_USE_SDRAM=1
-```
-
-The ring stores left and right channels as `float`, so `16384` frames uses
-128 KB. The `64` frame setting is the smallest sane power-of-two size above one
-48-frame USB/audio block and uses only 512 bytes. Keep the value a power of two
-because the bridge uses a ring mask for wrapping.
-The USB audio packet sent to the host is still 48 stereo frames, or 192 bytes,
-per 1 ms USB audio interval; this setting only controls the internal capture
-ring depth.
-`USB_COMP_AUDIO_USE_SDRAM=1` moves that capture ring from the normal SRAM-backed
-`.heap` section to `.sdram_bss`, which keeps the app's 512 KB SRAM budget clear.
-When libDaisy provides `DSY_SDRAM_BSS`, the bridge uses that macro and adds
-32-byte alignment so the USB capture FIFO can coexist with larger application
-sample pools in the same SDRAM section. Only use the SDRAM option after
-`hw.Init()` has initialized external SDRAM.
+In the audio callback:
 
 ```cpp
 UsbComp::PushCapture(capture_l, capture_r);
@@ -260,154 +55,88 @@ OUT_R[i] = capture_r + usb_r;
 UsbComp::CommitCaptureBlock();
 ```
 
-The firmware sends analog input plus the 100 Hz test tone to USB capture. USB
-playback from the host is mixed into the analog outputs.
+`UsbComp::Process()` must run in the foreground loop so queued MIDI responses
+and other deferred USB work can flush outside USB callbacks.
 
-Host validation:
-
-```bash
-aplay -l | grep -A1 'USB Composite Sample'
-arecord -l | grep -A1 'USB Composite Sample'
-```
-
-Use the card/device number reported by `aplay -l` and `arecord -l`. On one Pi
-test run the USB audio device appeared as `hw:3,0`. Record one second of the
-Daisy capture stream:
-
-```bash
-rm -f /tmp/example-comp-capture.wav
-arecord -D hw:3,0 -f S16_LE -c 2 -r 48000 -d 1 /tmp/example-comp-capture.wav
-ls -lh /tmp/example-comp-capture.wav
-```
-
-Expected result:
-
-```text
-188K /tmp/example-comp-capture.wav
-```
-
-Open one second of playback from the host to the Daisy, again using the actual
-USB audio device number from the host:
-
-```bash
-speaker-test -D hw:3,0 -c 2 -r 48000 -F S16_LE -t sine -f 440 -l 1
-```
-
-A passing test opens the playback stream without ALSA errors. The current
-firmware mixes that USB playback stream into the analog outputs.
-
-## USB MIDI In/Out
-
-USB MIDI is enabled by adding the shared `usbd_midi.c` source and enabling the
-MIDI composite flags:
+## Makefile Steps
 
 ```make
-$(USB_COMP_DIR)/usbd_midi.c
--DUSBD_CMPSIT_ACTIVATE_MIDI=1
--DUSB_COMP_TEST_MIDI=1
-```
+USB_COMP_DIR = ../usb-comp
+ST_USB_DEVICE_DIR = $(USB_COMP_DIR)/vendor/stm32_mw_usb_device
 
-The shared `usb-comp.h` bridge registers the MIDI interface during
-`UsbComp::Init()`. Incoming USB MIDI note-on and note-off packets queue an echo
-one semitone higher. The main loop sends the queued response from
-`UsbComp::Process()`, which gives a simple in/out validation without adding a
-sequencer or UI to `example-comp`.
+C_SOURCES += \
+$(USB_COMP_DIR)/usbd_conf.c \
+$(USB_COMP_DIR)/usbd_desc.c \
+$(USB_COMP_DIR)/usb_comp_cdc_if.c \
+$(USB_COMP_DIR)/usbd_audio.c \
+$(USB_COMP_DIR)/usbd_audio_if.c \
+$(USB_COMP_DIR)/usbd_midi.c \
+$(USB_COMP_DIR)/usbd_hid_kbd.c \
+$(USB_COMP_DIR)/usbd_composite_builder.c \
+$(ST_USB_DEVICE_DIR)/Core/Src/usbd_core.c \
+$(ST_USB_DEVICE_DIR)/Core/Src/usbd_ctlreq.c \
+$(ST_USB_DEVICE_DIR)/Core/Src/usbd_ioreq.c \
+$(ST_USB_DEVICE_DIR)/Class/CDC/Src/usbd_cdc.c
 
-Host validation:
+C_INCLUDES += \
+-I$(USB_COMP_DIR) \
+-I$(USB_COMP_DIR)/vendor/hid/Inc \
+-I$(ST_USB_DEVICE_DIR)/Core/Inc \
+-I$(ST_USB_DEVICE_DIR)/Class/CDC/Inc \
+-I$(ST_USB_DEVICE_DIR)/Class/CompositeBuilder/Inc
 
-```bash
-aconnect -l
-amidi -l
-```
-
-Then open a MIDI capture and send a note packet to the Daisy MIDI raw port. The
-expected returned packet for note-on `90 3C 40` is `90 3D 40`.
-
-```bash
-rm -f /tmp/example-comp-midi.bin
-timeout 3 amidi -p hw:3,0,0 -r /tmp/example-comp-midi.bin &
-sleep 0.5
-amidi -p hw:3,0,0 -S '90 3C 40'
-sleep 1
-od -An -tx1 /tmp/example-comp-midi.bin
-```
-
-Expected output:
-
-```text
-90 3d 40
-```
-
-## USB HID Keyboard
-
-USB HID is enabled by adding the shared NKRO keyboard class source, adding the
-vendored HID include path, and enabling the HID composite flags:
-
-```make
-$(USB_COMP_DIR)/usbd_hid_kbd.c
--I$(USB_COMP_DIR)/vendor/hid/Inc
--DUSBD_CMPSIT_ACTIVATE_HID=1
--DUSB_COMP_TEST_HID=1
+C_DEFS += \
+-DUSE_USBD_COMPOSITE \
+-DUSBD_CMPSIT_ACTIVATE_CDC=1 \
+-DUSBD_CMPSIT_ACTIVATE_HID=1 \
+-DUSBD_CMPSIT_ACTIVATE_AUDIO=1 \
+-DUSBD_CMPSIT_ACTIVATE_MIDI=1 \
+-DUSB_COMP_TEST_CDC=1 \
+-DUSB_COMP_TEST_HID=1 \
+-DUSB_COMP_TEST_AUDIO=1 \
+-DUSB_COMP_TEST_MIDI=1 \
+-DUSB_COMP_AUDIO_START_ON_BOOT=1 \
+-DUSB_COMP_AUDIO_USE_SDRAM=1 \
 -DHID_FS_BINTERVAL=0x01U
 ```
 
-The shared `usb-comp.h` bridge stores a 33-byte NKRO keyboard report, exposes
-`UsbComp::SetHidKeyA(bool pressed)`, and sends reports through
-`USBD_HID_SendReport()`. The current `example-comp` default calls it from the
-main loop because `USB_COMP_TEST_HID=1`.
+`example-comp` does not define `USB_COMP_AUDIO_CAPTURE_RING_SIZE`; it inherits
+the shared `usb-comp` default of 64 stereo float frames.
 
-To keep the HID keyboard interface present but stop firmware-generated key taps,
-set `USB_COMP_TEST_HID=0`.
+## Audio Defaults
 
-```cpp
-#if USB_COMP_TEST_HID
-UsbComp::SetHidKeyA(true);
-System::Delay(40);
-UsbComp::SetHidKeyA(false);
-#endif
-```
+- Audio rate: 48 kHz
+- Audio block size: 48 samples
+- USB audio packet: 48 stereo frames / 192 bytes every 1 ms
+- Capture ring: 64 stereo float frames / 512 bytes in SDRAM
 
-Host validation:
+## Build And Flash
 
 ```bash
+cd /mnt/clu-nas/developer/daisy-usb/example-comp
+PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make clean
+PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make -j2
+PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make program
+```
+
+## Host Test
+
+```bash
+lsusb | grep '0483:5764'
+ls -l /dev/serial/by-id | grep 'USB_Composite'
 ls -l /dev/input/by-id | grep 'USB_Composite.*event-kbd'
+aplay -l | grep -A1 'USB Composite Sample'
+arecord -l | grep -A1 'USB Composite Sample'
+amidi -l | grep 'USB Composite Sample'
 ```
 
-With `USB_COMP_TEST_HID=1`, validation should confirm that the keyboard event
-node exists and that firmware-generated `KEY_A` press/release events appear
-during the observation window.
+Expected behavior:
 
-Use the `/dev/input/event*` target from the `by-id` symlink:
+- CDC responds with `COMP CDC RX`
+- HID produces `KEY_A` press/release events when `USB_COMP_TEST_HID=1`
+- MIDI `90 3C 40` echoes as `90 3D 40`
+- USB audio capture records 48 kHz stereo data
+- USB audio playback opens without ALSA errors
 
-```bash
-python3 - <<'PY'
-import os, struct, time
-path = os.path.realpath('/dev/input/by-id/usb-Generic_USB_Composite_Sample_3958326E3432-event-kbd')
-fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
-end = time.time() + 4
-seen = []
-fmt = 'llHHI'
-size = struct.calcsize(fmt)
-while time.time() < end:
-    try:
-        data = os.read(fd, size * 32)
-    except BlockingIOError:
-        time.sleep(0.02)
-        continue
-    for off in range(0, len(data) - size + 1, size):
-        sec, usec, etype, code, value = struct.unpack(fmt, data[off:off + size])
-        if etype == 1:
-            seen.append((code, value))
-os.close(fd)
-print('events=' + ','.join(f'{code}:{value}' for code, value in seen[:20]))
-print('key_a_press=' + str((30, 1) in seen))
-print('key_a_release=' + str((30, 0) in seen))
-PY
-```
-
-Expected result:
-
-```text
-key_a_press=True
-key_a_release=True
-```
+To keep interfaces present but stop generated test traffic, set the
+`USB_COMP_TEST_*` flags to `0`.

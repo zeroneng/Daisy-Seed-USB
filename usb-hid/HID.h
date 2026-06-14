@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stdint.h>
-#include <stddef.h>
 
 // Initialize the USB HID device stack.
 void UsbHid_Init(void);
@@ -29,5 +28,4 @@ bool UsbHid_KeyOff(uint8_t keycode);
 // Convert a human-readable ASCII character to a HID usage code.
 // Returns 0 when no direct mapping is available.
 uint8_t UsbHid_CharToKeycode(char c);
-
 

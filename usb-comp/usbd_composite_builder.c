@@ -109,10 +109,6 @@ static void  USBD_CMPSIT_AssignEp(USBD_HandleTypeDef *pdev, uint8_t Add, uint8_t
 static void  USBD_CMPSIT_HIDMouseDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __IO uint32_t *Sze, uint8_t speed);
 #endif /* USBD_CMPSIT_ACTIVATE_HID == 1U */
 
-#if USBD_CMPSIT_ACTIVATE_MSC == 1U
-static void  USBD_CMPSIT_MSCDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __IO uint32_t *Sze, uint8_t speed);
-#endif /* USBD_CMPSIT_ACTIVATE_MSC == 1U */
-
 #if USBD_CMPSIT_ACTIVATE_CDC == 1U
 static void  USBD_CMPSIT_CDCDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __IO uint32_t *Sze, uint8_t speed);
 #endif /* USBD_CMPSIT_ACTIVATE_CDC == 1U */
@@ -315,37 +311,6 @@ uint8_t  USBD_CMPSIT_AddToConfDesc(USBD_HandleTypeDef *pdev)
 
       break;
 #endif /* USBD_CMPSIT_ACTIVATE_HID */
-
-#if USBD_CMPSIT_ACTIVATE_MSC == 1
-    case CLASS_TYPE_MSC:
-      /* Setup default Max packet size */
-      pdev->tclasslist[pdev->classId].CurrPcktSze = MSC_MAX_FS_PACKET;
-
-      /* Find the first available interface slot and Assign number of interfaces */
-      idxIf = USBD_CMPSIT_FindFreeIFNbr(pdev);
-      pdev->tclasslist[pdev->classId].NumIf = 1U;
-      pdev->tclasslist[pdev->classId].Ifs[0] = idxIf;
-
-      /* Assign endpoint numbers */
-      pdev->tclasslist[pdev->classId].NumEps = 2U; /* EP1_IN, EP1_OUT */
-
-      /* Set IN endpoint slot */
-      iEp = pdev->tclasslist[pdev->classId].EpAdd[0];
-      USBD_CMPSIT_AssignEp(pdev, iEp, USBD_EP_TYPE_BULK, pdev->tclasslist[pdev->classId].CurrPcktSze);
-
-      /* Set OUT endpoint slot */
-      iEp = pdev->tclasslist[pdev->classId].EpAdd[1];
-      USBD_CMPSIT_AssignEp(pdev, iEp, USBD_EP_TYPE_BULK, pdev->tclasslist[pdev->classId].CurrPcktSze);
-
-      /* Configure and Append the Descriptor */
-      USBD_CMPSIT_MSCDesc(pdev, (uint32_t)pCmpstFSConfDesc, &CurrFSConfDescSz, (uint8_t)USBD_SPEED_FULL);
-
-#ifdef USE_USB_HS
-      USBD_CMPSIT_MSCDesc(pdev, (uint32_t)pCmpstHSConfDesc, &CurrHSConfDescSz, (uint8_t)USBD_SPEED_HIGH);
-#endif /* USE_USB_HS */
-
-      break;
-#endif /* USBD_CMPSIT_ACTIVATE_MSC */
 
 #if USBD_CMPSIT_ACTIVATE_CDC == 1
     case CLASS_TYPE_CDC:
@@ -893,47 +858,10 @@ static void  USBD_CMPSIT_HIDMouseDesc(USBD_HandleTypeDef *pdev, uint32_t pConf,
 }
 #endif /* USBD_CMPSIT_ACTIVATE_HID == 1 */
 
-#if USBD_CMPSIT_ACTIVATE_MSC == 1
-/**
-  * @brief  USBD_CMPSIT_MSCDesc
-  *         Configure and Append the MSC Descriptor
-  * @param  pdev: device instance
-  * @param  pConf: Configuration descriptor pointer
-  * @param  Sze: pointer to the current configuration descriptor size
-  * @retval None
-  */
-static void  USBD_CMPSIT_MSCDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __IO uint32_t *Sze, uint8_t speed)
-{
-  USBD_IfDescTypeDef *pIfDesc;
-  USBD_EpDescTypeDef *pEpDesc;
-
-  /* Append MSC Interface descriptor */
-  __USBD_CMPSIT_SET_IF((pdev->tclasslist[pdev->classId].Ifs[0]), (0U), \
-                       (uint8_t)(pdev->tclasslist[pdev->classId].NumEps), (0x08U), (0x06U), (0x50U), (0U));
-
-  if (speed == (uint8_t)USBD_SPEED_HIGH)
-  {
-    pdev->tclasslist[pdev->classId].CurrPcktSze = MSC_MAX_HS_PACKET;
-  }
-
-  /* Append Endpoint descriptor to Configuration descriptor */
-  __USBD_CMPSIT_SET_EP((pdev->tclasslist[pdev->classId].Eps[0].add), (USBD_EP_TYPE_BULK), \
-                       (pdev->tclasslist[pdev->classId].CurrPcktSze), (0U), (0U));
-
-  /* Append Endpoint descriptor to Configuration descriptor */
-  __USBD_CMPSIT_SET_EP((pdev->tclasslist[pdev->classId].Eps[1].add), (USBD_EP_TYPE_BULK), \
-                       (pdev->tclasslist[pdev->classId].CurrPcktSze), (0U), (0U));
-
-  /* Update Config Descriptor and IAD descriptor */
-  ((USBD_ConfigDescTypeDef *)pConf)->bNumInterfaces += 1U;
-  ((USBD_ConfigDescTypeDef *)pConf)->wTotalLength = (uint16_t)(*Sze);
-}
-#endif /* USBD_CMPSIT_ACTIVATE_MSC == 1 */
-
 #if USBD_CMPSIT_ACTIVATE_CDC == 1
 /**
-  * @brief  USBD_CMPSIT_MSCDesc
-  *         Configure and Append the HID Mouse Descriptor
+  * @brief  USBD_CMPSIT_CDCDesc
+  *         Configure and Append the CDC Descriptor
   * @param  pdev: device instance
   * @param  pConf: Configuration descriptor pointer
   * @param  Sze: pointer to the current configuration descriptor size
@@ -1324,7 +1252,7 @@ static void  USBD_CMPSIT_MIDIDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __IO
 
 #if USBD_CMPSIT_ACTIVATE_RNDIS == 1
 /**
-  * @brief  USBD_CMPSIT_MSCDesc
+  * @brief  USBD_CMPSIT_RNDISDesc
   *         Configure and Append the CDC_RNDIS Descriptor
   * @param  pdev: device instance
   * @param  pConf: Configuration descriptor pointer
@@ -1421,7 +1349,7 @@ static void  USBD_CMPSIT_RNDISDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __I
 #if USBD_CMPSIT_ACTIVATE_CUSTOMHID == 1
 /**
   * @brief  USBD_CMPSIT_CUSTOMHIDDesc
-  *         Configure and Append the MSC Descriptor
+  *         Configure and Append the Custom HID Descriptor
   * @param  pdev: device instance
   * @param  pConf: Configuration descriptor pointer
   * @param  Sze: pointer to the current configuration descriptor size

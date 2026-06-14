@@ -41,22 +41,6 @@ using namespace daisy;
 #define USB_COMP_TEST_MIDI 1
 #endif
 
-#ifndef USB_COMP_ENABLE_MSC
-#define USB_COMP_ENABLE_MSC 0
-#endif
-
-#ifndef USB_COMP_TEST_MSC
-#define USB_COMP_TEST_MSC 1
-#endif
-
-#ifndef USB_COMP_MSC_USE_SD
-#define USB_COMP_MSC_USE_SD 0
-#endif
-
-#ifndef USB_COMP_MSC_TEST_ENABLE_DELAY_MS
-#define USB_COMP_MSC_TEST_ENABLE_DELAY_MS 0
-#endif
-
 extern "C" {
 #include "usbd_core.h"
 #include "usbd_desc.h"
@@ -79,11 +63,6 @@ extern "C" {
 
 #if USB_COMP_ENABLE_MIDI
 #include "usbd_midi.h"
-#endif
-
-#if USB_COMP_ENABLE_MSC
-#include "usbd_msc.h"
-#include "usbd_msc_storage.h"
 #endif
 
 extern USBD_HandleTypeDef hUsbDeviceHS;
@@ -147,17 +126,13 @@ uint8_t audio_class_id = kNoClass;
 uint8_t midi_class_id = kNoClass;
 #endif
 
-#if USB_COMP_ENABLE_MSC
-uint8_t msc_class_id = kNoClass;
-#endif
-
 #if USB_COMP_ENABLE_HID
 uint8_t hid_ep_addr[] = {0x84U};
 #endif
 
 #if USB_COMP_ENABLE_CDC
-// CDC data stays on EP2.  The notification endpoint is parked on EP6 so EP3
-// can carry MIDI data and EP5 can keep the large MSC IN FIFO.
+// CDC data stays on EP2. The notification endpoint is parked on EP6 so EP3 can
+// carry MIDI data.
 uint8_t cdc_ep_addr[] = {0x82U, 0x02U, 0x86U};
 #endif
 
@@ -165,7 +140,7 @@ uint8_t cdc_ep_addr[] = {0x82U, 0x02U, 0x86U};
 uint8_t audio_ep_addr[] = {AUDIO_OUT_EP, AUDIO_IN_EP};
 
 #ifndef USB_COMP_AUDIO_CAPTURE_RING_SIZE
-#define USB_COMP_AUDIO_CAPTURE_RING_SIZE 16384u
+#define USB_COMP_AUDIO_CAPTURE_RING_SIZE 64u
 #endif
 
 static_assert(USB_COMP_AUDIO_CAPTURE_RING_SIZE != 0u
@@ -203,17 +178,6 @@ USBD_MIDI_ItfTypeDef USB_COMP_MIDI_Interface_fops = {
 };
 #endif
 
-#if USB_COMP_ENABLE_MSC
-#if !USB_COMP_ENABLE_CDC && !USB_COMP_ENABLE_HID && !USB_COMP_ENABLE_AUDIO && !USB_COMP_ENABLE_MIDI
-// MSC-only mode can use EP1 like the standalone MSC example.
-uint8_t msc_ep_addr[] = {0x81U, 0x01U};
-#else
-// Composite mode keeps MSC IN on EP5. EP6 enumerated in tests but was not
-// reliable for real MSC/MIDI data on this ST full-speed stack.
-uint8_t msc_ep_addr[] = {0x85U, 0x04U};
-#endif
-#endif
-
 #if USB_COMP_ENABLE_AUDIO
 extern "C" uint32_t AudioFifo_GetWritePtrLast(void)
 {
@@ -244,19 +208,12 @@ extern "C" uint32_t AudioFifo_GetRingMask(void)
 #if USB_COMP_ENABLE_HID
 bool HidReportChanged()
 {
-    for(uint8_t i = 0; i < kNkroReportBytes; i++)
-    {
-        if(hid_report[i] != hid_last_sent_report[i])
-            return true;
-    }
-
-    return false;
+    return std::memcmp(hid_report, hid_last_sent_report, sizeof(hid_report)) != 0;
 }
 
 void SaveHidReport()
 {
-    for(uint8_t i = 0; i < kNkroReportBytes; i++)
-        hid_last_sent_report[i] = hid_report[i];
+    std::memcpy(hid_last_sent_report, hid_report, sizeof(hid_report));
 }
 
 bool SetKeyState(uint8_t keycode, bool pressed)
@@ -316,13 +273,6 @@ void InitUSBComposite()
     USBD_RegisterClassComposite(&hUsbDeviceHS, USBD_MIDI_CLASS, CLASS_TYPE_MIDI, midi_ep_addr);
     midi_class_id = static_cast<uint8_t>(USBD_CMPSIT_SetClassID(&hUsbDeviceHS, CLASS_TYPE_MIDI, 0));
     USBD_MIDI_RegisterInterface(&hUsbDeviceHS, &USB_COMP_MIDI_Interface_fops);
-    hUsbDeviceHS.classId = hUsbDeviceHS.NumClasses;
-#endif
-
-#if USB_COMP_ENABLE_MSC
-    USBD_RegisterClassComposite(&hUsbDeviceHS, USBD_MSC_CLASS, CLASS_TYPE_MSC, msc_ep_addr);
-    msc_class_id = static_cast<uint8_t>(USBD_CMPSIT_SetClassID(&hUsbDeviceHS, CLASS_TYPE_MSC, 0));
-    USBD_MSC_RegisterStorage(&hUsbDeviceHS, &USBD_MSC_Template_fops);
     hUsbDeviceHS.classId = hUsbDeviceHS.NumClasses;
 #endif
 
@@ -436,31 +386,6 @@ void RunCdcTest(bool led)
     SendCdcString(led ? "COMP CDC LED ON\r\n" : "COMP CDC LED OFF\r\n");
 #else
     (void)led;
-#endif
-}
-
-void RunMscControl()
-{
-#if USB_COMP_ENABLE_CDC && USB_COMP_ENABLE_MSC
-    // CDC RX only records a command byte.  The actual MSC enable/disable work
-    // runs here in the main loop, away from the USB receive callback context.
-    const uint8_t command = USB_COMP_CDC_TakeMscCommand();
-    if(command == 0U)
-        return;
-
-    if(command == 'M')
-    {
-        SendCdcString(USB_COMP_MSC_Enable() == 0 ? "COMP MSC ON\r\n" : "COMP MSC ERR\r\n");
-    }
-    else if(command == 'm')
-    {
-        USB_COMP_MSC_Disable();
-        SendCdcString("COMP MSC OFF\r\n");
-    }
-    else if(command == 'S')
-    {
-        SendCdcString(USB_COMP_MSC_IsEnabled() ? "COMP MSC STATUS ON\r\n" : "COMP MSC STATUS OFF\r\n");
-    }
 #endif
 }
 
@@ -608,9 +533,6 @@ void AudioCallback(AudioHandle::InputBuffer in,
 int main(void)
 {
     hw.Init();
-#if USB_COMP_ENABLE_MSC
-    STORAGE_UserInit();
-#endif
 #if USB_COMP_ENABLE_AUDIO
     hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
     hw.SetAudioBlockSize(48);
@@ -620,8 +542,6 @@ int main(void)
     InitUSBComposite();
 
 #if USB_COMP_ENABLE_AUDIO && USB_COMP_AUDIO_START_ON_BOOT
-    // Leave this off in storage-mode builds.  Active Daisy audio DMA plus
-    // SD-backed MSC is not stable yet; performance mode enables audio at boot.
     hw.StartAudio(AudioCallback);
 #endif
 
@@ -631,27 +551,12 @@ int main(void)
 
     bool led = false;
     bool cdc_ready_sent = false;
-#if USB_COMP_ENABLE_MSC && USB_COMP_MSC_TEST_ENABLE_DELAY_MS
-    const uint32_t msc_test_start = System::GetNow();
-    bool msc_test_enable_done = false;
-#endif
     for(;;)
     {
         led = !led;
         hw.SetLed(led);
         if(!cdc_ready_sent)
             cdc_ready_sent = SendCdcString("COMP CDC NKRO ready\r\n");
-        RunMscControl();
-#if USB_COMP_ENABLE_MSC && USB_COMP_MSC_TEST_ENABLE_DELAY_MS
-        // Diagnostic hook: proves runtime MSC enable from firmware without
-        // depending on CDC being usable in every descriptor profile.
-        if(!msc_test_enable_done
-           && (System::GetNow() - msc_test_start) >= USB_COMP_MSC_TEST_ENABLE_DELAY_MS)
-        {
-            (void)USB_COMP_MSC_Enable();
-            msc_test_enable_done = true;
-        }
-#endif
         RunCdcTest(led);
         RunHidTest();
 #if USB_COMP_ENABLE_MIDI

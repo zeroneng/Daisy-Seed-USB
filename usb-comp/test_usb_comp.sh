@@ -5,12 +5,10 @@ TEST_CDC="${TEST_CDC:-1}"
 TEST_HID="${TEST_HID:-1}"
 TEST_AUDIO="${TEST_AUDIO:-1}"
 TEST_MIDI="${TEST_MIDI:-1}"
-TEST_MSC="${TEST_MSC:-1}"
 CDC_TIMEOUT="${CDC_TIMEOUT:-5}"
 HID_TIMEOUT="${HID_TIMEOUT:-6}"
 AUDIO_TIMEOUT="${AUDIO_TIMEOUT:-6}"
 MIDI_TIMEOUT="${MIDI_TIMEOUT:-6}"
-MSC_TIMEOUT="${MSC_TIMEOUT:-8}"
 PRODUCT_PATTERN="${PRODUCT_PATTERN:-USB Composite Sample}"
 
 find_cdc_port() {
@@ -85,23 +83,6 @@ find_midi_port() {
         }
       }
     }'
-}
-
-find_msc_disk() {
-  local end=$((SECONDS + MSC_TIMEOUT))
-  local dev tran type
-
-  while (( SECONDS < end )); do
-    while read -r dev tran type; do
-      [[ "$type" == "disk" ]] || continue
-      [[ "$tran" == "usb" ]] || continue
-      printf '/dev/%s\n' "$dev"
-      return 0
-    done < <(lsblk -dn -o NAME,TRAN,TYPE 2>/dev/null)
-    sleep 0.25
-  done
-
-  return 1
 }
 
 echo "USB devices matching '${PRODUCT_PATTERN}':"
@@ -272,39 +253,6 @@ PY
   timeout "$AUDIO_TIMEOUT" aplay -q -D "hw:${playback_card},0" \
     -f S16_LE -c 2 -r 48000 --period-size=48 --buffer-size=480 \
     -t raw "$playback_raw"
-fi
-
-if [[ "$TEST_MSC" == "1" ]]; then
-  msc_disk="$(find_msc_disk)"
-  if [[ -z "$msc_disk" ]]; then
-    echo "No USB MSC disk found"
-    lsblk -o NAME,TRAN,MODEL,SIZE,RO,TYPE || true
-    exit 1
-  fi
-
-  echo "MSC disk: ${msc_disk}"
-  lsblk -o NAME,TRAN,MODEL,SIZE,RO,TYPE "$msc_disk"
-
-  msc_size="$(lsblk -dn -b -o SIZE "$msc_disk" | tr -d ' ')"
-  if [[ -z "$msc_size" || "$msc_size" == "0" ]]; then
-    echo "MSC disk size was not reported"
-    exit 1
-  fi
-  echo "MSC size bytes: ${msc_size}"
-
-  if [[ -r "$msc_disk" ]]; then
-    if ! timeout "$MSC_TIMEOUT" dd if="$msc_disk" of=/dev/null bs=512 count=1 status=none; then
-      echo "MSC read check failed"
-      exit 1
-    fi
-  else
-    sys_size="/sys/class/block/${msc_disk##*/}/size"
-    if [[ ! -r "$sys_size" || "$(cat "$sys_size")" == "0" ]]; then
-      echo "MSC sysfs capacity check failed"
-      exit 1
-    fi
-    echo "MSC raw read skipped: ${msc_disk} is not readable by this user"
-  fi
 fi
 
 echo "usb-comp host validation passed"
