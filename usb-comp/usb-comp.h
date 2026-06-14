@@ -80,20 +80,6 @@ uint32_t USBD_CMPSIT_GetClassID(USBD_HandleTypeDef *pdev,
 #define DSY_RAM_D2 __attribute__((section(".heap")))
 #endif
 
-#ifndef USB_COMP_AUDIO_USE_SDRAM
-#define USB_COMP_AUDIO_USE_SDRAM 0
-#endif
-
-#if USB_COMP_AUDIO_USE_SDRAM
-#ifdef DSY_SDRAM_BSS
-#define USB_COMP_AUDIO_BUFFER_MEM DSY_SDRAM_BSS __attribute__((aligned(32)))
-#else
-#define USB_COMP_AUDIO_BUFFER_MEM __attribute__((section(".sdram_bss"), aligned(32)))
-#endif
-#else
-#define USB_COMP_AUDIO_BUFFER_MEM DSY_RAM_D2
-#endif
-
 namespace UsbComp
 {
 constexpr uint8_t kNoClass = 0xFFU;
@@ -130,8 +116,8 @@ static_assert(USB_COMP_AUDIO_CAPTURE_RING_SIZE != 0u
 constexpr uint32_t kAudioRingSize = USB_COMP_AUDIO_CAPTURE_RING_SIZE;
 constexpr uint32_t kAudioRingMask = kAudioRingSize - 1u;
 
-static float audio_fifo_l[kAudioRingSize] USB_COMP_AUDIO_BUFFER_MEM = {};
-static float audio_fifo_r[kAudioRingSize] USB_COMP_AUDIO_BUFFER_MEM = {};
+static float audio_fifo_l[kAudioRingSize] DSY_RAM_D2 = {};
+static float audio_fifo_r[kAudioRingSize] DSY_RAM_D2 = {};
 static uint32_t audio_fifo_write_ptr = 0u;
 static uint32_t audio_fifo_write_ptr_last = 0u;
 #endif
