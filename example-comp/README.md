@@ -95,11 +95,12 @@ C_DEFS += \
 -DUSB_COMP_TEST_HID=1 \
 -DUSB_COMP_TEST_AUDIO=1 \
 -DUSB_COMP_TEST_MIDI=1 \
+-DUSB_COMP_AUDIO_CAPTURE_RING_SIZE=$(USB_COMP_AUDIO_CAPTURE_RING_SIZE) \
 -DHID_FS_BINTERVAL=0x01U
 ```
 
-`example-comp` does not define `USB_COMP_AUDIO_CAPTURE_RING_SIZE`; it inherits
-the shared `usb-comp` default of 64 stereo float frames.
+Set `USB_COMP_AUDIO_CAPTURE_RING_SIZE ?= 64` near the top of the Makefile.
+Use `128` if the app audio callback block size moves to 128 frames.
 
 ## Audio Defaults
 
@@ -107,6 +108,7 @@ the shared `usb-comp` default of 64 stereo float frames.
 - Audio block size: 48 samples
 - USB audio packet: 48 stereo frames / 192 bytes every 1 ms
 - Capture ring: 64 stereo float frames / 512 bytes in SRAM
+- Ring sizes must be powers of two and at least 64 frames
 
 ## Build And Flash
 

@@ -129,11 +129,11 @@ uint8_t audio_ep_addr[] = {AUDIO_OUT_EP, AUDIO_IN_EP};
 #define USB_COMP_AUDIO_CAPTURE_RING_SIZE 64u
 #endif
 
-static_assert(USB_COMP_AUDIO_CAPTURE_RING_SIZE != 0u
+static_assert(USB_COMP_AUDIO_CAPTURE_RING_SIZE >= 64u
                   && ((USB_COMP_AUDIO_CAPTURE_RING_SIZE
                        & (USB_COMP_AUDIO_CAPTURE_RING_SIZE - 1u))
                       == 0u),
-              "USB_COMP_AUDIO_CAPTURE_RING_SIZE must be a power of two");
+              "USB_COMP_AUDIO_CAPTURE_RING_SIZE must be a power of two >= 64");
 
 constexpr uint32_t kFifoRingSize = USB_COMP_AUDIO_CAPTURE_RING_SIZE;
 constexpr uint32_t kFifoRingMask = kFifoRingSize - 1u;

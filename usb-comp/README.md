@@ -79,6 +79,7 @@ C_DEFS += \
 -DUSB_COMP_TEST_HID=0 \
 -DUSB_COMP_TEST_AUDIO=0 \
 -DUSB_COMP_TEST_MIDI=0 \
+-DUSB_COMP_AUDIO_CAPTURE_RING_SIZE=64 \
 -DHID_FS_BINTERVAL=0x01U
 ```
 
@@ -123,7 +124,9 @@ Do not call `hw.StartLog(false)` for the same USB device after `UsbComp::Init()`
 - USB audio packet: 48 stereo frames / 192 bytes every 1 ms
 - Capture ring: 64 stereo float frames / 512 bytes
 - Capture ring storage: SRAM by default
-- Ring sizes must be powers of two
+- Set `USB_COMP_AUDIO_CAPTURE_RING_SIZE` to match the app audio callback
+  block size when needed, for example `64` or `128`
+- Ring sizes must be powers of two and at least 64 frames
 - HID polling interval: 1 ms
 
 ## Build And Test
