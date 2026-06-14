@@ -7,7 +7,8 @@ on the Daisy Seed external USB port.
 
 ## Current Projects
 
-- `basic-usb` - internal-flash app that reuses the shared `usb-comp` stack.
+- `example-comp` - internal-flash app that reuses the shared `usb-comp` stack.
+- `example-hid` - simple blink app that reuses the standalone `usb-hid` stack.
 - `usb-comp` - composite CDC, HID, audio, MIDI, and optional MSC reference.
 - `usb-cdc` - standalone CDC ACM reference.
 - `usb-hid` - standalone HID keyboard/reference path.

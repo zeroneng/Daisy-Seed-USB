@@ -1,4 +1,4 @@
-TARGET = BasicUsb
+TARGET = ExampleComp
 
 # Boot Type
 # APP_TYPE = BOOT_QSPI
@@ -7,7 +7,7 @@ LIBDAISY_DIR = ../../libDaisy
 USB_COMP_DIR = ../usb-comp
 ST_USB_DEVICE_DIR = $(USB_COMP_DIR)/vendor/stm32_mw_usb_device
 
-CPP_SOURCES = BasicUsb.cpp
+CPP_SOURCES = ExampleComp.cpp
 
 C_SOURCES += \
 $(USB_COMP_DIR)/usbd_conf.c \

@@ -542,7 +542,7 @@ Historical validation on the Pi/Daisy setup has included:
 - SD-backed MSC runtime enable after boot
 - MSC-only SD reads with 4-bit libDaisy SD configuration
 
-After project cleanup on 2026-06-13, `usb-comp` and `basic-usb` still build
+After project cleanup on 2026-06-13, `usb-comp` and `example-comp` still build
 from the kept project-local vendor folders:
 
 - `usb-comp/vendor`

@@ -1,4 +1,4 @@
-# basic-usb
+# example-comp
 
 Minimal Daisy Seed blink plus audio callback app.
 
@@ -18,8 +18,8 @@ Minimal Daisy Seed blink plus audio callback app.
 
 ## Exact CDC Bring-Up Steps
 
-1. Keep `basic-usb` as the application folder and reuse the shared sources from `../usb-comp`.
-2. Include the bridge header in `BasicUsb.cpp`:
+1. Keep `example-comp` as the application folder and reuse the shared sources from `../usb-comp`.
+2. Include the bridge header in `ExampleComp.cpp`:
 
 ```cpp
 #include "usb-comp.h"
@@ -79,9 +79,9 @@ ls -l /dev/serial/by-id | grep 'USB_Composite'
 
 ```bash
 stty -F /dev/ttyACM1 115200 raw -echo -echoe -echok
-timeout 3 cat /dev/ttyACM1 > /tmp/basic-usb-cdc.out &
+timeout 3 cat /dev/ttyACM1 > /tmp/example-comp-cdc.out &
 printf 'x' > /dev/ttyACM1
-cat /tmp/basic-usb-cdc.out
+cat /tmp/example-comp-cdc.out
 ```
 
 Expected response:
@@ -90,9 +90,9 @@ Expected response:
 COMP CDC RX
 ```
 
-## BasicUsb.cpp Firmware Changes
+## ExampleComp.cpp Firmware Changes
 
-The `basic-usb` firmware has to call the shared `usb-comp` bridge from the app
+The `example-comp` firmware has to call the shared `usb-comp` bridge from the app
 code. These are the firmware-side changes that make the enabled USB functions
 work.
 
@@ -167,7 +167,7 @@ void AudioCallback(AudioHandle::InputBuffer  in,
 ```
 
 The optional HID self-test is controlled by `USB_COMP_TEST_HID`. With the
-default `basic-usb` build it is set to `0`, so the main loop only blinks the
+default `example-comp` build it is set to `0`, so the main loop only blinks the
 LED and does not send keyboard reports:
 
 ```cpp
@@ -188,14 +188,14 @@ System::Delay(500);
 #endif
 ```
 
-MIDI in/out does not require a libDaisy audio callback. `basic-usb` enables the
+MIDI in/out does not require a libDaisy audio callback. `example-comp` enables the
 MIDI class in the Makefile. The shared `usb-comp.h` bridge queues note-on and
 note-off echo responses from the USB MIDI receive callback, and the main loop
 flushes those responses from `UsbComp::Process()`.
 
 ## Internal-Flash Build
 
-`basic-usb` currently builds as a normal internal-flash application. The
+`example-comp` currently builds as a normal internal-flash application. The
 Makefile keeps the old QSPI bootloader app setting commented out:
 
 ```make
@@ -230,7 +230,7 @@ $(USB_COMP_DIR)/usbd_audio_if.c
 ```
 
 The USB capture ring defaults to `16384` stereo frames in the shared bridge for
-backward compatibility, but `basic-usb` validates the smaller SRAM-friendly
+backward compatibility, but `example-comp` validates the smaller SRAM-friendly
 setting:
 
 ```make
@@ -271,15 +271,15 @@ test run the USB audio device appeared as `hw:3,0`. Record one second of the
 Daisy capture stream:
 
 ```bash
-rm -f /tmp/basic-usb-capture.wav
-arecord -D hw:3,0 -f S16_LE -c 2 -r 48000 -d 1 /tmp/basic-usb-capture.wav
-ls -lh /tmp/basic-usb-capture.wav
+rm -f /tmp/example-comp-capture.wav
+arecord -D hw:3,0 -f S16_LE -c 2 -r 48000 -d 1 /tmp/example-comp-capture.wav
+ls -lh /tmp/example-comp-capture.wav
 ```
 
 Expected result:
 
 ```text
-188K /tmp/basic-usb-capture.wav
+188K /tmp/example-comp-capture.wav
 ```
 
 Open one second of playback from the host to the Daisy, again using the actual
@@ -307,7 +307,7 @@ The shared `usb-comp.h` bridge registers the MIDI interface during
 `UsbComp::Init()`. Incoming USB MIDI note-on and note-off packets queue an echo
 one semitone higher. The main loop sends the queued response from
 `UsbComp::Process()`, which gives a simple in/out validation without adding a
-sequencer or UI to `basic-usb`.
+sequencer or UI to `example-comp`.
 
 Host validation:
 
@@ -320,12 +320,12 @@ Then open a MIDI capture and send a note packet to the Daisy MIDI raw port. The
 expected returned packet for note-on `90 3C 40` is `90 3D 40`.
 
 ```bash
-rm -f /tmp/basic-usb-midi.bin
-timeout 3 amidi -p hw:3,0,0 -r /tmp/basic-usb-midi.bin &
+rm -f /tmp/example-comp-midi.bin
+timeout 3 amidi -p hw:3,0,0 -r /tmp/example-comp-midi.bin &
 sleep 0.5
 amidi -p hw:3,0,0 -S '90 3C 40'
 sleep 1
-od -An -tx1 /tmp/basic-usb-midi.bin
+od -An -tx1 /tmp/example-comp-midi.bin
 ```
 
 Expected output:
@@ -349,7 +349,7 @@ $(USB_COMP_DIR)/usbd_hid_kbd.c
 
 The shared `usb-comp.h` bridge stores a 33-byte NKRO keyboard report, exposes
 `UsbComp::SetHidKeyA(bool pressed)`, and sends reports through
-`USBD_HID_SendReport()`. The current `basic-usb` default does not call it from
+`USBD_HID_SendReport()`. The current `example-comp` default does not call it from
 the main loop because `USB_COMP_TEST_HID=0`.
 
 To intentionally re-enable the firmware-generated `A` tap test, set

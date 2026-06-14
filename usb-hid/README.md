@@ -32,6 +32,9 @@ The intended reusable pattern is:
 - do **not** try to run CDC and HID at the same time in the same simple build path
 - instead, compile one USB personality or the other based on a project-wide macro
 
+For a minimal app that reuses this folder as a shared HID layer, see
+`../example-hid`.
+
 A practical default policy is:
 
 - `DEBUG=1` or `USB_MODE_CDC=1` → build the CDC path
