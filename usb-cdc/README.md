@@ -58,6 +58,7 @@ That is the most important architectural difference.
 These files are the CDC reference set:
 
 - `UsbCdc.cpp`
+- `CDC.cpp` / `CDC.h`
 - `usbd_conf.c`
 - `usbd_desc.c`
 - `Makefile`
@@ -66,9 +67,15 @@ These are the files to study/port.
 
 ### `UsbCdc.cpp`
 Contains:
-- direct USB CDC initialization
-- `CDC_Transmit_HS()` test send path
+- `DaisySeed hw;` plus `hw.Init()` for libDaisy compatibility
+- `UsbCdc_Init()` startup
+- `UsbCdc_TransmitString()` test send path
 - no dependency on `hw.StartLog(false)`
+
+### `CDC.cpp` / `CDC.h`
+Contains:
+- direct USB CDC initialization helper
+- small transmit helpers for strings and formatted lines
 
 ### `usbd_conf.c`
 Contains:
@@ -133,7 +140,7 @@ Create a new folder in the target application, for example:
 Add files modeled after this project:
 - `usb-cdc/usbd_conf.c`
 - `usb-cdc/usbd_desc.c`
-- optional `usb-cdc/CDC.cpp` or equivalent helper
+- `usb-cdc/CDC.cpp` / `usb-cdc/CDC.h`
 
 Do **not** mix these into the HID folder.
 
@@ -148,8 +155,6 @@ C_SOURCES += \
  usb-cdc/usbd_desc.c \
  $(LIBDAISY_DIR)/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c
 ```
-
-If you create a C++ helper:
 
 ```make
 CPP_SOURCES += \
@@ -214,7 +219,7 @@ Port it exactly first.
 Before integrating full logging, add a simple known-good send path like:
 
 ```cpp
-CDC_Transmit_HS((uint8_t*)msg, len);
+UsbCdc_TransmitString("hello\r\n");
 ```
 
 Use it for a minimal heartbeat/test string first.

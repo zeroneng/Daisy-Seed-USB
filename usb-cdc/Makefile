@@ -9,7 +9,7 @@ AS = arm-none-eabi-gcc -x assembler-with-cpp
 OBJCOPY = arm-none-eabi-objcopy
 
 MCU = -mcpu=cortex-m7 -mthumb -mfpu=fpv5-d16 -mfloat-abi=hard
-C_DEFS = -DCORE_CM7 -DSTM32H750xx -DSTM32H750IB -DARM_MATH_CM7 -DHSE_VALUE=16000000 -DUSE_HAL_DRIVER -DUSE_FULL_LL_DRIVER -DFILEIO_ENABLE_FATFS_READER
+C_DEFS = -DCORE_CM7 -DSTM32H750xx -DSTM32H750IB -DARM_MATH_CM7 -DHSE_VALUE=16000000 -DUSE_HAL_DRIVER -DUSE_FULL_LL_DRIVER
 C_INCLUDES = \
 -I$(LIBDAISY_DIR) \
 -I$(LIBDAISY_DIR)/src \
@@ -22,8 +22,6 @@ C_INCLUDES = \
 -I$(LIBDAISY_DIR)/Drivers/STM32H7xx_HAL_Driver/Inc \
 -I$(LIBDAISY_DIR)/Middlewares/ST/STM32_USB_Device_Library/Core/Inc \
 -I$(LIBDAISY_DIR)/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc \
--I$(LIBDAISY_DIR)/Middlewares/ST/STM32_USB_Host_Library/Core/Inc \
--I$(LIBDAISY_DIR)/Middlewares/ST/STM32_USB_Host_Library/Class/MSC/Inc \
 -I$(LIBDAISY_DIR)/Middlewares/Third_Party/FatFs/src \
 -I$(LIBDAISY_DIR)/core
 
