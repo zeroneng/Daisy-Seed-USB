@@ -79,7 +79,7 @@ C_DEFS += \
 -DUSB_COMP_TEST_HID=0 \
 -DUSB_COMP_TEST_AUDIO=0 \
 -DUSB_COMP_TEST_MIDI=0 \
--DUSB_COMP_AUDIO_CAPTURE_RING_SIZE=64 \
+-DUSB_COMP_AUDIO_CAPTURE_RING_SIZE=256 \
 -DUSB_COMP_AUDIO_PLAYBACK_RING_SIZE=512 \
 -DHID_FS_BINTERVAL=0x01U
 ```
@@ -119,19 +119,48 @@ UsbComp::CommitCaptureBlock();
 
 Do not call `hw.StartLog(false)` for the same USB device after `UsbComp::Init()`.
 
+## USB Handle Ownership
+
+The composite stack must own the ST USB device handles. `usbd_conf.c` defines:
+
+```c
+USBD_HandleTypeDef hUsbDeviceFS;
+USBD_HandleTypeDef hUsbDeviceHS;
+```
+
+Do not leave these as unresolved `extern` symbols in an app integration. If
+`hUsbDeviceHS` is declared but not defined by this stack, the linker can satisfy
+the symbol from `libDaisy/build/libdaisy.a(usb.o)`. That silently pulls in part
+of libDaisy's older USB device layer, so a project may appear to avoid USB
+logging or legacy USB calls while still linking against the old USB owner.
+
+If `UsbComp::Init()` locks up, or composite USB behaves differently inside an
+app than it does in this standalone example, check the map file first:
+
+```bash
+grep -E 'hUsbDevice(HS|FS)|hpcd_USB_OTG_HS' build/*.map
+```
+
+Expected result: `hUsbDeviceHS`, `hUsbDeviceFS`, and the PCD handle should come
+from the local `usbd_conf.o` built from this `usb-comp` directory.
+
 ## Defaults
 
 - USB audio: 48 kHz, stereo, 16-bit
 - USB audio packet: 48 stereo frames / 192 bytes every 1 ms
-- Capture ring: 64 stereo float frames / 512 bytes
+- Capture ring: 256 stereo float frames / 2048 bytes
 - Playback ring: 512 usable stereo int16 frames / 2048 bytes
 - Capture ring storage: SRAM by default
-- Set `USB_COMP_AUDIO_CAPTURE_RING_SIZE` to match the app audio callback
-  block size when needed, for example `64` or `128`
+- USB capture uses a persistent read cursor. It does not re-anchor each packet
+  to the app write cursor, because that can skip or repeat samples as the USB
+  SOF and audio callback clocks drift.
+- Set `USB_COMP_AUDIO_CAPTURE_RING_SIZE` larger than the app audio callback
+  block size when needed. `256` is the default; `512` is a conservative option
+  for heavier apps.
 - `USB_COMP_AUDIO_PLAYBACK_RING_SIZE` is separate from the capture callback
   size. It buffers USB host playback jitter; 512 is the smallest value that
   passed the full composite hardware test on this target.
-- Ring sizes must be powers of two and at least 64 frames
+- Capture ring sizes must be powers of two and at least 128 frames
 - HID polling interval: 1 ms
 
 ## Build And Test

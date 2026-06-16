@@ -58,6 +58,31 @@ UsbComp::CommitCaptureBlock();
 `UsbComp::Process()` must run in the foreground loop so queued MIDI responses
 and other deferred USB work can flush outside USB callbacks.
 
+## Integration Check
+
+`../usb-comp/usbd_conf.c` must be part of the app build. It owns the ST USB
+device handles:
+
+```c
+USBD_HandleTypeDef hUsbDeviceFS;
+USBD_HandleTypeDef hUsbDeviceHS;
+```
+
+This matters because `hUsbDeviceHS` is also present in libDaisy's older USB
+device layer. If an app only declares the handle as `extern` and does not link
+the `usb-comp` definition, the linker can satisfy the symbol from
+`libDaisy/build/libdaisy.a(usb.o)`. That silently pulls in the old USB owner and
+can make composite init lock up or behave differently from this example.
+
+When porting this example into another app, check the final map file:
+
+```bash
+grep -E 'hUsbDevice(HS|FS)|hpcd_USB_OTG_HS' build/*.map
+```
+
+Expected result: the USB device and PCD handles should come from the local
+`usbd_conf.o` built from `../usb-comp`, not from `libdaisy.a(usb.o)`.
+
 ## Makefile Steps
 
 ```make
@@ -100,8 +125,8 @@ C_DEFS += \
 -DHID_FS_BINTERVAL=0x01U
 ```
 
-Set `USB_COMP_AUDIO_CAPTURE_RING_SIZE ?= 64` near the top of the Makefile.
-Use `128` if the app audio callback block size moves to 128 frames.
+Set `USB_COMP_AUDIO_CAPTURE_RING_SIZE ?= 256` near the top of the Makefile.
+Use `512` for heavier apps or if capture timing still shows underruns.
 Set `USB_COMP_AUDIO_PLAYBACK_RING_SIZE ?= 512` for the USB playback ring.
 This is separate from the capture callback size and buffers host playback
 jitter.
@@ -111,9 +136,9 @@ jitter.
 - Audio rate: 48 kHz
 - Audio block size: 48 samples
 - USB audio packet: 48 stereo frames / 192 bytes every 1 ms
-- Capture ring: 64 stereo float frames / 512 bytes in SRAM
+- Capture ring: 256 stereo float frames / 2048 bytes in SRAM
 - Playback ring: 512 usable stereo int16 frames / 2048 bytes in SRAM
-- Ring sizes must be powers of two and at least 64 frames
+- Capture ring sizes must be powers of two and at least 128 frames
 
 ## Build And Flash
 

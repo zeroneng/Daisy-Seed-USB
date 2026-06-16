@@ -17,6 +17,7 @@
 #define BYTES_PER_SAMPLE    2U
 #define USB_FRAMES_NOM      48U
 #define USB_BYTES_NOM       (USB_FRAMES_NOM * AUDIO_CHANNELS * BYTES_PER_SAMPLE)
+#define CAPTURE_DELAY_FRAMES (USB_FRAMES_NOM * 2U)
 
 #ifndef USB_COMP_AUDIO_PLAYBACK_RING_SIZE
 #define USB_COMP_AUDIO_PLAYBACK_RING_SIZE 512U
@@ -32,6 +33,35 @@
 static __attribute__((section(".heap"))) int16_t playback_ring[PLAYBACK_RING_FRAMES * AUDIO_CHANNELS];
 static volatile uint32_t playback_wr = 0U;
 static volatile uint32_t playback_rd = 0U;
+static uint32_t capture_rd = 0U;
+static uint8_t capture_rd_valid = 0U;
+
+static float ClampAudioFloat(float sample)
+{
+    if(sample > 1.0f)
+        return 1.0f;
+    if(sample < -1.0f)
+        return -1.0f;
+    return sample;
+}
+
+static uint32_t CaptureStartDelay(uint32_t ring_size)
+{
+    uint32_t delay = CAPTURE_DELAY_FRAMES;
+    const uint32_t max_delay = ring_size - USB_FRAMES_NOM;
+
+    if(delay > max_delay)
+        delay = max_delay;
+
+    return delay;
+}
+
+static void CaptureResync(uint32_t write_pos, uint32_t ring_size)
+{
+    const uint32_t delay = CaptureStartDelay(ring_size);
+    capture_rd = (write_pos > delay) ? (write_pos - delay) : 0U;
+    capture_rd_valid = 1U;
+}
 
 /* -----------------------------------------------------------------------
  * Init
@@ -42,6 +72,8 @@ static  int8_t Audio_Init(uint32_t AudioFreq, uint32_t Volume, uint32_t options)
     memset(playback_ring, 0, sizeof(playback_ring));
     playback_wr = 0U;
     playback_rd = 0U;
+    capture_rd = 0U;
+    capture_rd_valid = 0U;
     return USBD_OK;
 }
 
@@ -77,21 +109,44 @@ static uint16_t Audio_PeriodicTC(uint8_t *pbuf, uint32_t size, uint8_t cmd)
 
     uint32_t out_frames = USB_FRAMES_NOM;
     uint32_t ring_size = AudioFifo_GetRingSize();
-    uint32_t ring_mask = AudioFifo_GetRingMask();
-    uint32_t readPtr = AudioFifo_GetWritePtrLast();
+    uint32_t write_pos = AudioFifo_GetWritePtrLast();
     int16_t *out = (int16_t *)pbuf;
+
+    if(ring_size <= USB_FRAMES_NOM)
+    {
+        memset(pbuf, 0, USB_BYTES_NOM);
+        return USB_BYTES_NOM;
+    }
+
+    if(!capture_rd_valid)
+        CaptureResync(write_pos, ring_size);
+
+    uint32_t available = write_pos - capture_rd;
+    if(available > (ring_size - USB_FRAMES_NOM))
+    {
+        CaptureResync(write_pos, ring_size);
+        available = write_pos - capture_rd;
+    }
+
     for(uint32_t i = 0; i < out_frames; i++)
     {
-        uint32_t rp = (readPtr + (ring_size / 2u)) & ring_mask;
-        float l = AudioFifo_GetLeft(rp);
-        float r = AudioFifo_GetRight(rp);
+        if(available == 0U)
+        {
+            out[i * AUDIO_CHANNELS + 0] = 0;
+            out[i * AUDIO_CHANNELS + 1] = 0;
+            continue;
+        }
+
+        float l = ClampAudioFloat(AudioFifo_GetLeft(capture_rd));
+        float r = ClampAudioFloat(AudioFifo_GetRight(capture_rd));
 
         int16_t sl = (int16_t)(l * 32767.0f);
         int16_t sr = (int16_t)(r * 32767.0f);
         out[i * AUDIO_CHANNELS + 0] = sl;
         out[i * AUDIO_CHANNELS + 1] = sr;
 
-        readPtr = (readPtr + 1u) & ring_mask;
+        capture_rd++;
+        available--;
     }
 
     return (uint16_t)(out_frames * AUDIO_CHANNELS * BYTES_PER_SAMPLE);

@@ -126,14 +126,14 @@ uint8_t cdc_ep_addr[] = {0x82U, 0x02U, 0x86U};
 uint8_t audio_ep_addr[] = {AUDIO_OUT_EP, AUDIO_IN_EP};
 
 #ifndef USB_COMP_AUDIO_CAPTURE_RING_SIZE
-#define USB_COMP_AUDIO_CAPTURE_RING_SIZE 64u
+#define USB_COMP_AUDIO_CAPTURE_RING_SIZE 256u
 #endif
 
-static_assert(USB_COMP_AUDIO_CAPTURE_RING_SIZE >= 64u
+static_assert(USB_COMP_AUDIO_CAPTURE_RING_SIZE >= 128u
                   && ((USB_COMP_AUDIO_CAPTURE_RING_SIZE
                        & (USB_COMP_AUDIO_CAPTURE_RING_SIZE - 1u))
                       == 0u),
-              "USB_COMP_AUDIO_CAPTURE_RING_SIZE must be a power of two >= 64");
+              "USB_COMP_AUDIO_CAPTURE_RING_SIZE must be a power of two >= 128");
 
 constexpr uint32_t kFifoRingSize = USB_COMP_AUDIO_CAPTURE_RING_SIZE;
 constexpr uint32_t kFifoRingMask = kFifoRingSize - 1u;
@@ -183,11 +183,6 @@ extern "C" float AudioFifo_GetRight(uint32_t index)
 extern "C" uint32_t AudioFifo_GetRingSize(void)
 {
     return kFifoRingSize;
-}
-
-extern "C" uint32_t AudioFifo_GetRingMask(void)
-{
-    return kFifoRingMask;
 }
 #endif
 
@@ -499,9 +494,10 @@ void AudioCallback(AudioHandle::InputBuffer in,
         const float capture_l = input_l + s;
         const float capture_r = input_r + s;
 
-        fifo_l[fifo_write_ptr] = capture_l;
-        fifo_r[fifo_write_ptr] = capture_r;
-        fifo_write_ptr = (fifo_write_ptr + 1u) & kFifoRingMask;
+        const uint32_t write_idx = fifo_write_ptr & kFifoRingMask;
+        fifo_l[write_idx] = capture_l;
+        fifo_r[write_idx] = capture_r;
+        fifo_write_ptr++;
 
         int16_t playback[2];
         AudioIF_PopPlaybackSamples(playback, 1);

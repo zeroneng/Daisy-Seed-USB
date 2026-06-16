@@ -108,14 +108,14 @@ static uint8_t audio_class_id = kNoClass;
 static uint8_t audio_ep_addr[] = {AUDIO_OUT_EP, AUDIO_IN_EP};
 
 #ifndef USB_COMP_AUDIO_CAPTURE_RING_SIZE
-#define USB_COMP_AUDIO_CAPTURE_RING_SIZE 64u
+#define USB_COMP_AUDIO_CAPTURE_RING_SIZE 256u
 #endif
 
-static_assert(USB_COMP_AUDIO_CAPTURE_RING_SIZE >= 64u
+static_assert(USB_COMP_AUDIO_CAPTURE_RING_SIZE >= 128u
                   && ((USB_COMP_AUDIO_CAPTURE_RING_SIZE
                        & (USB_COMP_AUDIO_CAPTURE_RING_SIZE - 1u))
                       == 0u),
-              "USB_COMP_AUDIO_CAPTURE_RING_SIZE must be a power of two >= 64");
+              "USB_COMP_AUDIO_CAPTURE_RING_SIZE must be a power of two >= 128");
 
 constexpr uint32_t kAudioRingSize = USB_COMP_AUDIO_CAPTURE_RING_SIZE;
 constexpr uint32_t kAudioRingMask = kAudioRingSize - 1u;
@@ -234,9 +234,10 @@ static void Init()
 #if USB_COMP_ENABLE_AUDIO
 static void PushCapture(float left, float right)
 {
-    audio_fifo_l[audio_fifo_write_ptr] = left;
-    audio_fifo_r[audio_fifo_write_ptr] = right;
-    audio_fifo_write_ptr = (audio_fifo_write_ptr + 1u) & kAudioRingMask;
+    const uint32_t write_idx = audio_fifo_write_ptr & kAudioRingMask;
+    audio_fifo_l[write_idx] = left;
+    audio_fifo_r[write_idx] = right;
+    audio_fifo_write_ptr++;
 }
 
 static void CommitCaptureBlock()
@@ -508,10 +509,5 @@ extern "C" float AudioFifo_GetRight(uint32_t index)
 extern "C" uint32_t AudioFifo_GetRingSize(void)
 {
     return UsbComp::kAudioRingSize;
-}
-
-extern "C" uint32_t AudioFifo_GetRingMask(void)
-{
-    return UsbComp::kAudioRingMask;
 }
 #endif
