@@ -91,7 +91,9 @@ static uint8_t hid_last_sent_report[kNkroReportBytes] = {};
 static uint8_t audio_class_id = kNoClass;
 static uint8_t audio_ep_addr[] = {AUDIO_OUT_EP, AUDIO_IN_EP};
 
-#ifndef USB_COMP_AUDIO_CAPTURE_RING_SIZE
+#if !defined(USB_COMP_AUDIO_CAPTURE_RING_SIZE) \
+    || ((USB_COMP_AUDIO_CAPTURE_RING_SIZE + 0u) == 0u)
+#undef USB_COMP_AUDIO_CAPTURE_RING_SIZE
 #define USB_COMP_AUDIO_CAPTURE_RING_SIZE 512u
 #endif
 
