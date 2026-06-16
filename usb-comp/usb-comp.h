@@ -80,7 +80,6 @@ static uint8_t cdc_ep_addr[] = {0x82U, 0x02U, 0x86U};
 #if USBD_CMPSIT_ACTIVATE_HID
 constexpr uint8_t kNkroReportBytes = 33;
 constexpr uint8_t kNkroBitmapOffset = 1;
-constexpr uint8_t kHidKeyA = 0x04;
 static uint8_t hid_class_id = kNoClass;
 static uint8_t hid_ep_addr[] = {0x84U};
 static uint8_t hid_report[kNkroReportBytes] = {};
@@ -113,12 +112,18 @@ static uint32_t audio_fifo_write_ptr_last = 0u;
 #endif
 
 #if USBD_CMPSIT_ACTIVATE_MIDI
+using MidiReceiveCallback = void (*)(uint8_t cin,
+                                     uint8_t status,
+                                     uint8_t data1,
+                                     uint8_t data2);
+
 static uint8_t midi_class_id = kNoClass;
 static uint8_t midi_ep_addr[] = {MIDI_IN_EP, MIDI_OUT_EP};
 static uint8_t midi_rx_buffer[MIDI_DATA_FS_OUT_PACKET_SIZE] DSY_RAM_D2 = {};
 static uint8_t midi_tx_buffer[MIDI_USB_EVENT_PACKET_SIZE] DSY_RAM_D2 = {};
 static uint8_t midi_pending_packet[MIDI_USB_EVENT_PACKET_SIZE] = {};
 static volatile bool midi_tx_pending = false;
+static MidiReceiveCallback midi_receive_callback = nullptr;
 
 static int8_t MidiInit();
 static int8_t MidiDeInit();
@@ -131,6 +136,8 @@ static USBD_MIDI_ItfTypeDef midi_fops = {
     MidiReceive,
     MidiTransmitComplete,
 };
+#else
+using MidiReceiveCallback = void (*)(uint8_t, uint8_t, uint8_t, uint8_t);
 #endif
 
 static void Init()
@@ -324,22 +331,6 @@ static inline void ClearAllKeys()
     SendHidReport();
 }
 
-static bool KeyOn(uint8_t keycode)
-{
-    const bool ok = SetHidKeyState(keycode, true);
-    if(ok)
-        SendHidReport();
-    return ok;
-}
-
-static bool KeyOff(uint8_t keycode)
-{
-    const bool ok = SetHidKeyState(keycode, false);
-    if(ok)
-        SendHidReport();
-    return ok;
-}
-
 static inline uint8_t CharToKeycode(char c)
 {
     if(c >= 'a' && c <= 'z')
@@ -375,21 +366,19 @@ static inline uint8_t CharToKeycode(char c)
     }
 }
 
-static bool SetHidKeyA(bool pressed)
-{
-    return pressed ? KeyOn(kHidKeyA) : KeyOff(kHidKeyA);
-}
 #else
 static bool SetHidKeyState(uint8_t, bool) { return false; }
 static bool SendHidReport() { return false; }
 static inline void ClearAllKeys() {}
-static bool KeyOn(uint8_t) { return false; }
-static bool KeyOff(uint8_t) { return false; }
 static inline uint8_t CharToKeycode(char) { return 0U; }
-static bool SetHidKeyA(bool) { return false; }
 #endif
 
 #if USBD_CMPSIT_ACTIVATE_MIDI
+static void SetMidiReceiveCallback(MidiReceiveCallback callback)
+{
+    midi_receive_callback = callback;
+}
+
 static void QueueMidiPacket(uint8_t cin, uint8_t status, uint8_t data1, uint8_t data2)
 {
     midi_pending_packet[0] = cin;
@@ -438,6 +427,9 @@ static int8_t MidiReceive(uint8_t* buf, uint32_t* len)
         const uint8_t data1 = buf[offset + 2];
         const uint8_t data2 = buf[offset + 3];
 
+        if(midi_receive_callback != nullptr)
+            midi_receive_callback(cin, status, data1, data2);
+
         if((cin == 0x09U) && ((status & 0xF0U) == 0x90U) && data2 != 0U)
         {
             QueueMidiPacket(0x09U, 0x90U, static_cast<uint8_t>(data1 + 1U), data2);
@@ -458,6 +450,8 @@ static int8_t MidiTransmitComplete(uint8_t* buf, uint32_t* len, uint8_t epnum)
     (void)epnum;
     return USBD_OK;
 }
+#else
+static void SetMidiReceiveCallback(MidiReceiveCallback) {}
 #endif
 
 static void Process()

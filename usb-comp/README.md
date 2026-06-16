@@ -31,14 +31,67 @@ UsbComp::SendCdc("text\r\n");
 
 UsbComp::SetHidKeyState(keycode, pressed);
 UsbComp::SendHidReport();
-UsbComp::KeyOn(keycode);
-UsbComp::KeyOff(keycode);
 UsbComp::ClearAllKeys();
+
+UsbComp::SetMidiReceiveCallback(callback);
+UsbComp::SendMidiPacket(cin, status, data1, data2);
 
 UsbComp::PushCapture(left, right);
 UsbComp::PopPlayback(left, right);
 UsbComp::CommitCaptureBlock();
 ```
+
+CDC sends null-terminated text to the host serial port:
+
+```cpp
+UsbComp::SendCdc("RHYTHM ready\r\n");
+```
+
+HID uses USB HID keycodes. Set key state, then send the NKRO report:
+
+```cpp
+const uint8_t key = UsbComp::CharToKeycode('a');
+UsbComp::ClearAllKeys();
+UsbComp::SetHidKeyState(key, true);
+UsbComp::SendHidReport();
+System::Delay(40);
+UsbComp::SetHidKeyState(key, false);
+UsbComp::SendHidReport();
+```
+
+For multi-key reports, update key state first, then send one report:
+
+```cpp
+UsbComp::SetHidKeyState(UsbComp::CharToKeycode('a'), true);
+UsbComp::SetHidKeyState(UsbComp::CharToKeycode('s'), true);
+UsbComp::SendHidReport();
+
+UsbComp::ClearAllKeys();
+```
+
+MIDI sends one 4-byte USB MIDI event packet. Note on uses CIN `0x09`; note off
+uses CIN `0x08`:
+
+```cpp
+UsbComp::SendMidiPacket(0x09, 0x90, 60, 100); // note on, middle C
+UsbComp::SendMidiPacket(0x08, 0x80, 60, 0);   // note off, middle C
+```
+
+MIDI input is captured with a lightweight callback. This callback runs from the
+USB receive path, so keep it short: copy the bytes into an app queue/ring buffer
+and handle the real work from the main loop.
+
+```cpp
+void OnUsbMidi(uint8_t cin, uint8_t status, uint8_t data1, uint8_t data2)
+{
+    // Push/copy into a small app-owned MIDI RX queue.
+}
+
+UsbComp::SetMidiReceiveCallback(OnUsbMidi);
+```
+
+Keep `UsbComp::Process()` running in the foreground loop. It flushes deferred
+MIDI work queued from USB callbacks.
 
 ## Drop-In Makefile
 

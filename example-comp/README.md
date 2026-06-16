@@ -4,8 +4,9 @@ Minimal Daisy Seed app using `../usb-comp`.
 
 It blinks the LED, runs a 48 kHz audio callback, starts composite USB, sends a
 100 Hz test tone to analog and USB audio capture, mixes USB playback into analog
-output, echoes MIDI notes one semitone higher, and sends a repeating HID `A`
-key tap by default.
+output, captures incoming MIDI to CDC serial text, sends a one-second MIDI test
+message, and sends a one-second NKRO HID `A` key tap by directly setting key
+state and sending HID reports.
 
 USB profile:
 
@@ -57,6 +58,61 @@ UsbComp::CommitCaptureBlock();
 
 `UsbComp::Process()` must run in the foreground loop so queued MIDI responses
 and other deferred USB work can flush outside USB callbacks.
+
+## CDC, HID, And MIDI Examples
+
+Send text to the host CDC ACM serial port:
+
+```cpp
+UsbComp::SendCdc("example-comp online\r\n");
+```
+
+Send a single HID keyboard key press and release with NKRO report functions:
+
+```cpp
+const uint8_t key = UsbComp::CharToKeycode('a');
+UsbComp::ClearAllKeys();
+UsbComp::SetHidKeyState(key, true);
+UsbComp::SendHidReport();
+System::Delay(40);
+UsbComp::SetHidKeyState(key, false);
+UsbComp::SendHidReport();
+```
+
+Build a multi-key HID report, then send it once:
+
+```cpp
+UsbComp::SetHidKeyState(UsbComp::CharToKeycode('a'), true);
+UsbComp::SetHidKeyState(UsbComp::CharToKeycode('s'), true);
+UsbComp::SendHidReport();
+
+UsbComp::ClearAllKeys();
+```
+
+Send USB MIDI note packets directly. The first byte is the USB MIDI CIN:
+
+```cpp
+UsbComp::SendMidiPacket(0x09, 0x90, 60, 100); // note on, middle C
+UsbComp::SendMidiPacket(0x08, 0x80, 60, 0);   // note off, middle C
+```
+
+Capture incoming USB MIDI packets with a callback:
+
+```cpp
+void OnUsbMidi(uint8_t cin, uint8_t status, uint8_t data1, uint8_t data2)
+{
+    // Copy into an app queue; do heavier work from the main loop.
+}
+
+UsbComp::SetMidiReceiveCallback(OnUsbMidi);
+```
+
+In this app the callback copies each USB MIDI packet into a small foreground
+queue. The main loop prints each packet to the CDC serial console:
+
+```text
+MIDI RX 09 90 3C 40
+```
 
 ## Integration Check
 

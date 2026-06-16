@@ -91,9 +91,6 @@ constexpr uint8_t kNoClass = 0xFFU;
 #if USBD_CMPSIT_ACTIVATE_HID
 constexpr uint8_t kNkroReportBytes = 33;
 constexpr uint8_t kNkroBitmapOffset = 1;
-#if USB_COMP_TEST_HID
-constexpr uint8_t kHidKeyA = 0x04;
-#endif
 
 uint8_t hid_report[kNkroReportBytes] = {0};
 uint8_t hid_last_sent_report[kNkroReportBytes] = {0};
@@ -303,22 +300,6 @@ void ClearAllKeys()
     SendHidReport();
 }
 
-bool KeyOn(uint8_t keycode)
-{
-    const bool ok = SetKeyState(keycode, true);
-    if(ok)
-        SendHidReport();
-    return ok;
-}
-
-bool KeyOff(uint8_t keycode)
-{
-    const bool ok = SetKeyState(keycode, false);
-    if(ok)
-        SendHidReport();
-    return ok;
-}
-
 uint8_t CharToKeycode(char c)
 {
     if(c >= 'a' && c <= 'z')
@@ -367,10 +348,13 @@ void RunCdcTest(bool led)
 void RunHidTest()
 {
 #if USBD_CMPSIT_ACTIVATE_HID && USB_COMP_TEST_HID
+    const uint8_t key = CharToKeycode('a');
     ClearAllKeys();
-    KeyOn(CharToKeycode('a'));
+    SetKeyState(key, true);
+    SendHidReport();
     System::Delay(40);
-    KeyOff(CharToKeycode('a'));
+    SetKeyState(key, false);
+    SendHidReport();
 #endif
 }
 
