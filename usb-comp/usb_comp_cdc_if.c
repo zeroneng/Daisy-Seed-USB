@@ -1,6 +1,10 @@
 #include "usb_comp_cdc_if.h"
 #include <string.h>
 
+#ifndef USB_COMP_TEST_CDC
+#define USB_COMP_TEST_CDC 0
+#endif
+
 uint8_t UserRxBufferHS[APP_RX_DATA_SIZE];
 uint8_t UserTxBufferHS[APP_TX_DATA_SIZE];
 uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];

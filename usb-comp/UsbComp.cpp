@@ -5,40 +5,40 @@
 
 using namespace daisy;
 
-#ifndef USB_COMP_ENABLE_CDC
-#define USB_COMP_ENABLE_CDC 1
+#ifndef USBD_CMPSIT_ACTIVATE_CDC
+#define USBD_CMPSIT_ACTIVATE_CDC 1
 #endif
 
-#ifndef USB_COMP_ENABLE_HID
-#define USB_COMP_ENABLE_HID 1
+#ifndef USBD_CMPSIT_ACTIVATE_HID
+#define USBD_CMPSIT_ACTIVATE_HID 1
 #endif
 
 #ifndef USB_COMP_TEST_CDC
-#define USB_COMP_TEST_CDC 1
+#define USB_COMP_TEST_CDC 0
 #endif
 
 #ifndef USB_COMP_TEST_HID
-#define USB_COMP_TEST_HID 1
+#define USB_COMP_TEST_HID 0
 #endif
 
-#ifndef USB_COMP_ENABLE_AUDIO
-#define USB_COMP_ENABLE_AUDIO 1
+#ifndef USBD_CMPSIT_ACTIVATE_AUDIO
+#define USBD_CMPSIT_ACTIVATE_AUDIO 1
 #endif
 
 #ifndef USB_COMP_TEST_AUDIO
-#define USB_COMP_TEST_AUDIO 1
+#define USB_COMP_TEST_AUDIO 0
 #endif
 
 #ifndef USB_COMP_AUDIO_START_ON_BOOT
 #define USB_COMP_AUDIO_START_ON_BOOT 1
 #endif
 
-#ifndef USB_COMP_ENABLE_MIDI
-#define USB_COMP_ENABLE_MIDI 1
+#ifndef USBD_CMPSIT_ACTIVATE_MIDI
+#define USBD_CMPSIT_ACTIVATE_MIDI 1
 #endif
 
 #ifndef USB_COMP_TEST_MIDI
-#define USB_COMP_TEST_MIDI 1
+#define USB_COMP_TEST_MIDI 0
 #endif
 
 extern "C" {
@@ -47,21 +47,21 @@ extern "C" {
 #include "usbd_def.h"
 #include "usb_comp_cdc_if.h"
 
-#if USB_COMP_ENABLE_CDC
+#if USBD_CMPSIT_ACTIVATE_CDC
 #include "usbd_cdc.h"
 #endif
 
-#if USB_COMP_ENABLE_HID
+#if USBD_CMPSIT_ACTIVATE_HID
 #include "usbd_hid.h"
 #endif
 
-#if USB_COMP_ENABLE_AUDIO
+#if USBD_CMPSIT_ACTIVATE_AUDIO
 #include "audio_fifo_shared.h"
 #include "usbd_audio.h"
 #include "usbd_audio_if.h"
 #endif
 
-#if USB_COMP_ENABLE_MIDI
+#if USBD_CMPSIT_ACTIVATE_MIDI
 #include "usbd_midi.h"
 #endif
 
@@ -88,10 +88,10 @@ constexpr uint8_t kNoClass = 0xFFU;
 #define DSY_RAM_D2 __attribute__((section(".heap")))
 #endif
 
-#if USB_COMP_ENABLE_HID
+#if USBD_CMPSIT_ACTIVATE_HID
 constexpr uint8_t kNkroReportBytes = 33;
-#if USB_COMP_TEST_HID
 constexpr uint8_t kNkroBitmapOffset = 1;
+#if USB_COMP_TEST_HID
 constexpr uint8_t kHidKeyA = 0x04;
 #endif
 
@@ -100,33 +100,33 @@ uint8_t hid_last_sent_report[kNkroReportBytes] = {0};
 uint8_t hid_class_id = kNoClass;
 #endif
 
-#if USB_COMP_ENABLE_CDC
+#if USBD_CMPSIT_ACTIVATE_CDC
 uint8_t cdc_class_id = kNoClass;
 #endif
 
-#if USB_COMP_ENABLE_AUDIO
+#if USBD_CMPSIT_ACTIVATE_AUDIO
 uint8_t audio_class_id = kNoClass;
 #endif
 
-#if USB_COMP_ENABLE_MIDI
+#if USBD_CMPSIT_ACTIVATE_MIDI
 uint8_t midi_class_id = kNoClass;
 #endif
 
-#if USB_COMP_ENABLE_HID
+#if USBD_CMPSIT_ACTIVATE_HID
 uint8_t hid_ep_addr[] = {0x84U};
 #endif
 
-#if USB_COMP_ENABLE_CDC
+#if USBD_CMPSIT_ACTIVATE_CDC
 // CDC data stays on EP2. The notification endpoint is parked on EP6 so EP3 can
 // carry MIDI data.
 uint8_t cdc_ep_addr[] = {0x82U, 0x02U, 0x86U};
 #endif
 
-#if USB_COMP_ENABLE_AUDIO
+#if USBD_CMPSIT_ACTIVATE_AUDIO
 uint8_t audio_ep_addr[] = {AUDIO_OUT_EP, AUDIO_IN_EP};
 
 #ifndef USB_COMP_AUDIO_CAPTURE_RING_SIZE
-#define USB_COMP_AUDIO_CAPTURE_RING_SIZE 256u
+#define USB_COMP_AUDIO_CAPTURE_RING_SIZE 512u
 #endif
 
 static_assert(USB_COMP_AUDIO_CAPTURE_RING_SIZE >= 128u
@@ -146,7 +146,7 @@ float phase_inc = 0.0f;
 float amplitude = 0.1f;
 #endif
 
-#if USB_COMP_ENABLE_MIDI
+#if USBD_CMPSIT_ACTIVATE_MIDI
 uint8_t midi_ep_addr[] = {MIDI_IN_EP, MIDI_OUT_EP};
 uint8_t midi_rx_buffer[MIDI_DATA_FS_OUT_PACKET_SIZE] DSY_RAM_D2 = {0};
 #if USB_COMP_TEST_MIDI
@@ -164,7 +164,7 @@ USBD_MIDI_ItfTypeDef USB_COMP_MIDI_Interface_fops = {
 };
 #endif
 
-#if USB_COMP_ENABLE_AUDIO
+#if USBD_CMPSIT_ACTIVATE_AUDIO
 extern "C" uint32_t AudioFifo_GetWritePtrLast(void)
 {
     return fifo_write_ptr_last;
@@ -186,7 +186,7 @@ extern "C" uint32_t AudioFifo_GetRingSize(void)
 }
 #endif
 
-#if USB_COMP_ENABLE_HID
+#if USBD_CMPSIT_ACTIVATE_HID
 bool HidReportChanged()
 {
     return std::memcmp(hid_report, hid_last_sent_report, sizeof(hid_report)) != 0;
@@ -197,6 +197,7 @@ void SaveHidReport()
     std::memcpy(hid_last_sent_report, hid_report, sizeof(hid_report));
 }
 
+#if USB_COMP_TEST_HID
 bool SetKeyState(uint8_t keycode, bool pressed)
 {
     if(keycode > 0xE7)
@@ -225,17 +226,18 @@ bool SetKeyState(uint8_t keycode, bool pressed)
     return true;
 }
 #endif
+#endif
 
 void InitUSBComposite()
 {
     USBD_Init(&hUsbDeviceHS, &HS_Desc, DEVICE_HS);
 
-#if USB_COMP_ENABLE_HID
+#if USBD_CMPSIT_ACTIVATE_HID
     USBD_RegisterClassComposite(&hUsbDeviceHS, USBD_HID_CLASS, CLASS_TYPE_HID, hid_ep_addr);
     hid_class_id = static_cast<uint8_t>(USBD_CMPSIT_GetClassID(&hUsbDeviceHS, CLASS_TYPE_HID, 0));
 #endif
 
-#if USB_COMP_ENABLE_CDC
+#if USBD_CMPSIT_ACTIVATE_CDC
     USBD_RegisterClassComposite(&hUsbDeviceHS, USBD_CDC_CLASS, CLASS_TYPE_CDC, cdc_ep_addr);
     cdc_class_id = static_cast<uint8_t>(USBD_CMPSIT_SetClassID(&hUsbDeviceHS, CLASS_TYPE_CDC, 0));
     USB_COMP_CDC_SetClassId(cdc_class_id);
@@ -243,14 +245,14 @@ void InitUSBComposite()
     hUsbDeviceHS.classId = hUsbDeviceHS.NumClasses;
 #endif
 
-#if USB_COMP_ENABLE_AUDIO
+#if USBD_CMPSIT_ACTIVATE_AUDIO
     USBD_RegisterClassComposite(&hUsbDeviceHS, USBD_AUDIO_CLASS, CLASS_TYPE_AUDIO, audio_ep_addr);
     audio_class_id = static_cast<uint8_t>(USBD_CMPSIT_SetClassID(&hUsbDeviceHS, CLASS_TYPE_AUDIO, 0));
     USBD_AUDIO_RegisterInterface(&hUsbDeviceHS, &USBD_AUDIO_fops);
     hUsbDeviceHS.classId = hUsbDeviceHS.NumClasses;
 #endif
 
-#if USB_COMP_ENABLE_MIDI
+#if USBD_CMPSIT_ACTIVATE_MIDI
     USBD_RegisterClassComposite(&hUsbDeviceHS, USBD_MIDI_CLASS, CLASS_TYPE_MIDI, midi_ep_addr);
     midi_class_id = static_cast<uint8_t>(USBD_CMPSIT_SetClassID(&hUsbDeviceHS, CLASS_TYPE_MIDI, 0));
     USBD_MIDI_RegisterInterface(&hUsbDeviceHS, &USB_COMP_MIDI_Interface_fops);
@@ -262,7 +264,7 @@ void InitUSBComposite()
 
 bool SendCdcString(const char* s)
 {
-#if USB_COMP_ENABLE_CDC
+#if USBD_CMPSIT_ACTIVATE_CDC
     if(!s || cdc_class_id == kNoClass || !USB_COMP_CDC_IsConnected())
         return false;
 
@@ -275,7 +277,7 @@ bool SendCdcString(const char* s)
 
 bool SendHidReport()
 {
-#if USB_COMP_ENABLE_HID
+#if USBD_CMPSIT_ACTIVATE_HID
     if(hid_class_id == kNoClass)
         return false;
 
@@ -292,38 +294,27 @@ bool SendHidReport()
 #endif
 }
 
+#if USBD_CMPSIT_ACTIVATE_HID && USB_COMP_TEST_HID
 void ClearAllKeys()
 {
-#if USB_COMP_ENABLE_HID
     std::memset(hid_report, 0, sizeof(hid_report));
     SendHidReport();
-#endif
 }
 
 bool KeyOn(uint8_t keycode)
 {
-#if USB_COMP_ENABLE_HID
     const bool ok = SetKeyState(keycode, true);
     if(ok)
         SendHidReport();
     return ok;
-#else
-    (void)keycode;
-    return false;
-#endif
 }
 
 bool KeyOff(uint8_t keycode)
 {
-#if USB_COMP_ENABLE_HID
     const bool ok = SetKeyState(keycode, false);
     if(ok)
         SendHidReport();
     return ok;
-#else
-    (void)keycode;
-    return false;
-#endif
 }
 
 uint8_t CharToKeycode(char c)
@@ -360,10 +351,11 @@ uint8_t CharToKeycode(char c)
         default: return 0x00;
     }
 }
+#endif
 
 void RunCdcTest(bool led)
 {
-#if USB_COMP_ENABLE_CDC && USB_COMP_TEST_CDC
+#if USBD_CMPSIT_ACTIVATE_CDC && USB_COMP_TEST_CDC
     SendCdcString(led ? "COMP CDC LED ON\r\n" : "COMP CDC LED OFF\r\n");
 #else
     (void)led;
@@ -372,7 +364,7 @@ void RunCdcTest(bool led)
 
 void RunHidTest()
 {
-#if USB_COMP_ENABLE_HID && USB_COMP_TEST_HID
+#if USBD_CMPSIT_ACTIVATE_HID && USB_COMP_TEST_HID
     ClearAllKeys();
     KeyOn(CharToKeycode('a'));
     System::Delay(40);
@@ -380,7 +372,7 @@ void RunHidTest()
 #endif
 }
 
-#if USB_COMP_ENABLE_MIDI
+#if USBD_CMPSIT_ACTIVATE_MIDI
 #if USB_COMP_TEST_MIDI
 bool SendMidiPacket(uint8_t cin, uint8_t status, uint8_t data1, uint8_t data2)
 {
@@ -459,7 +451,7 @@ int8_t MIDI_TransmitCplt_HS(uint8_t* buf, uint32_t* len, uint8_t epnum)
 }
 #endif
 
-#if USB_COMP_ENABLE_AUDIO
+#if USBD_CMPSIT_ACTIVATE_AUDIO
 void InitAudioTestSignal()
 {
     phase = 0.0f;
@@ -515,7 +507,7 @@ void AudioCallback(AudioHandle::InputBuffer in,
 int main(void)
 {
     hw.Init();
-#if USB_COMP_ENABLE_AUDIO
+#if USBD_CMPSIT_ACTIVATE_AUDIO
     hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
     hw.SetAudioBlockSize(48);
     InitAudioTestSignal();
@@ -523,7 +515,7 @@ int main(void)
 
     InitUSBComposite();
 
-#if USB_COMP_ENABLE_AUDIO && USB_COMP_AUDIO_START_ON_BOOT
+#if USBD_CMPSIT_ACTIVATE_AUDIO && USB_COMP_AUDIO_START_ON_BOOT
     hw.StartAudio(AudioCallback);
 #endif
 
@@ -541,7 +533,7 @@ int main(void)
             cdc_ready_sent = SendCdcString("COMP CDC NKRO ready\r\n");
         RunCdcTest(led);
         RunHidTest();
-#if USB_COMP_ENABLE_MIDI
+#if USBD_CMPSIT_ACTIVATE_MIDI
         RunMidiTest();
 #endif
         System::Delay(1000);

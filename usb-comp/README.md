@@ -45,20 +45,40 @@ UsbComp::CommitCaptureBlock();
 ```make
 USB_COMP_DIR = ../usb-comp
 ST_USB_DEVICE_DIR = $(USB_COMP_DIR)/vendor/stm32_mw_usb_device
+USBD_CMPSIT_ACTIVATE_CDC ?= 1
+USBD_CMPSIT_ACTIVATE_HID ?= 1
+USBD_CMPSIT_ACTIVATE_AUDIO ?= 1
+USBD_CMPSIT_ACTIVATE_MIDI ?= 1
 
 C_SOURCES += \
 $(USB_COMP_DIR)/usbd_conf.c \
 $(USB_COMP_DIR)/usbd_desc.c \
-$(USB_COMP_DIR)/usb_comp_cdc_if.c \
-$(USB_COMP_DIR)/usbd_audio.c \
-$(USB_COMP_DIR)/usbd_audio_if.c \
-$(USB_COMP_DIR)/usbd_midi.c \
-$(USB_COMP_DIR)/usbd_hid_kbd.c \
 $(USB_COMP_DIR)/usbd_composite_builder.c \
 $(ST_USB_DEVICE_DIR)/Core/Src/usbd_core.c \
 $(ST_USB_DEVICE_DIR)/Core/Src/usbd_ctlreq.c \
-$(ST_USB_DEVICE_DIR)/Core/Src/usbd_ioreq.c \
+$(ST_USB_DEVICE_DIR)/Core/Src/usbd_ioreq.c
+
+ifeq ($(USBD_CMPSIT_ACTIVATE_CDC),1)
+C_SOURCES += \
+$(USB_COMP_DIR)/usb_comp_cdc_if.c \
 $(ST_USB_DEVICE_DIR)/Class/CDC/Src/usbd_cdc.c
+endif
+
+ifeq ($(USBD_CMPSIT_ACTIVATE_HID),1)
+C_SOURCES += \
+$(USB_COMP_DIR)/usbd_hid_kbd.c
+endif
+
+ifeq ($(USBD_CMPSIT_ACTIVATE_AUDIO),1)
+C_SOURCES += \
+$(USB_COMP_DIR)/usbd_audio.c \
+$(USB_COMP_DIR)/usbd_audio_if.c
+endif
+
+ifeq ($(USBD_CMPSIT_ACTIVATE_MIDI),1)
+C_SOURCES += \
+$(USB_COMP_DIR)/usbd_midi.c
+endif
 
 C_INCLUDES += \
 -I$(USB_COMP_DIR) \
@@ -71,21 +91,23 @@ C_INCLUDES += \
 
 C_DEFS += \
 -DUSE_USBD_COMPOSITE \
--DUSBD_CMPSIT_ACTIVATE_CDC=1 \
--DUSBD_CMPSIT_ACTIVATE_HID=1 \
--DUSBD_CMPSIT_ACTIVATE_AUDIO=1 \
--DUSBD_CMPSIT_ACTIVATE_MIDI=1 \
--DUSB_COMP_TEST_CDC=0 \
--DUSB_COMP_TEST_HID=0 \
--DUSB_COMP_TEST_AUDIO=0 \
--DUSB_COMP_TEST_MIDI=0 \
--DUSB_COMP_AUDIO_CAPTURE_RING_SIZE=256 \
--DUSB_COMP_AUDIO_PLAYBACK_RING_SIZE=512 \
+-DUSBD_CMPSIT_ACTIVATE_CDC=$(USBD_CMPSIT_ACTIVATE_CDC) \
+-DUSBD_CMPSIT_ACTIVATE_HID=$(USBD_CMPSIT_ACTIVATE_HID) \
+-DUSBD_CMPSIT_ACTIVATE_AUDIO=$(USBD_CMPSIT_ACTIVATE_AUDIO) \
+-DUSBD_CMPSIT_ACTIVATE_MIDI=$(USBD_CMPSIT_ACTIVATE_MIDI) \
 -DHID_FS_BINTERVAL=0x01U
 ```
 
 Keep `-I$(USB_COMP_DIR)` before libDaisy USB includes so the local
 `usbd_conf.h` is used.
+
+`USB_COMP_TEST_CDC`, `USB_COMP_TEST_HID`, `USB_COMP_TEST_AUDIO`, and
+`USB_COMP_TEST_MIDI` default to `0`. Only define one as `1` in a validation app
+when you want generated CDC replies, HID key taps, MIDI echo, or audio test tone.
+
+Omit `USB_COMP_AUDIO_CAPTURE_RING_SIZE` and `USB_COMP_AUDIO_PLAYBACK_RING_SIZE`
+for the default `512` frame capture ring and `512` frame playback ring. Only
+define one when overriding it.
 
 ## App Startup
 
@@ -148,19 +170,18 @@ from the local `usbd_conf.o` built from this `usb-comp` directory.
 
 - USB audio: 48 kHz, stereo, 16-bit
 - USB audio packet: 48 stereo frames / 192 bytes every 1 ms
-- Capture ring: 256 stereo float frames / 2048 bytes
+- Capture ring: 512 stereo float frames / 4096 bytes
 - Playback ring: 512 usable stereo int16 frames / 2048 bytes
 - Capture ring storage: SRAM by default
 - USB capture uses a persistent read cursor. It does not re-anchor each packet
   to the app write cursor, because that can skip or repeat samples as the USB
   SOF and audio callback clocks drift.
-- Set `USB_COMP_AUDIO_CAPTURE_RING_SIZE` larger than the app audio callback
-  block size when needed. `256` is the default; `512` is a conservative option
-  for heavier apps.
+- Omit `USB_COMP_AUDIO_CAPTURE_RING_SIZE` for the default `512` frame capture
+  ring. Override it only when you need a different power-of-two size.
 - `USB_COMP_AUDIO_PLAYBACK_RING_SIZE` is separate from the capture callback
-  size. It buffers USB host playback jitter; 512 is the smallest value that
-  passed the full composite hardware test on this target.
+  size. Omit it for the default `512` frame playback ring.
 - Capture ring sizes must be powers of two and at least 128 frames
+- Playback ring sizes must be powers of two and at least 64 frames
 - HID polling interval: 1 ms
 
 ## Build And Test

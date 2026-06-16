@@ -88,20 +88,40 @@ Expected result: the USB device and PCD handles should come from the local
 ```make
 USB_COMP_DIR = ../usb-comp
 ST_USB_DEVICE_DIR = $(USB_COMP_DIR)/vendor/stm32_mw_usb_device
+USBD_CMPSIT_ACTIVATE_CDC ?= 1
+USBD_CMPSIT_ACTIVATE_HID ?= 1
+USBD_CMPSIT_ACTIVATE_AUDIO ?= 1
+USBD_CMPSIT_ACTIVATE_MIDI ?= 1
 
 C_SOURCES += \
 $(USB_COMP_DIR)/usbd_conf.c \
 $(USB_COMP_DIR)/usbd_desc.c \
-$(USB_COMP_DIR)/usb_comp_cdc_if.c \
-$(USB_COMP_DIR)/usbd_audio.c \
-$(USB_COMP_DIR)/usbd_audio_if.c \
-$(USB_COMP_DIR)/usbd_midi.c \
-$(USB_COMP_DIR)/usbd_hid_kbd.c \
 $(USB_COMP_DIR)/usbd_composite_builder.c \
 $(ST_USB_DEVICE_DIR)/Core/Src/usbd_core.c \
 $(ST_USB_DEVICE_DIR)/Core/Src/usbd_ctlreq.c \
-$(ST_USB_DEVICE_DIR)/Core/Src/usbd_ioreq.c \
+$(ST_USB_DEVICE_DIR)/Core/Src/usbd_ioreq.c
+
+ifeq ($(USBD_CMPSIT_ACTIVATE_CDC),1)
+C_SOURCES += \
+$(USB_COMP_DIR)/usb_comp_cdc_if.c \
 $(ST_USB_DEVICE_DIR)/Class/CDC/Src/usbd_cdc.c
+endif
+
+ifeq ($(USBD_CMPSIT_ACTIVATE_HID),1)
+C_SOURCES += \
+$(USB_COMP_DIR)/usbd_hid_kbd.c
+endif
+
+ifeq ($(USBD_CMPSIT_ACTIVATE_AUDIO),1)
+C_SOURCES += \
+$(USB_COMP_DIR)/usbd_audio.c \
+$(USB_COMP_DIR)/usbd_audio_if.c
+endif
+
+ifeq ($(USBD_CMPSIT_ACTIVATE_MIDI),1)
+C_SOURCES += \
+$(USB_COMP_DIR)/usbd_midi.c
+endif
 
 C_INCLUDES += \
 -I$(USB_COMP_DIR) \
@@ -112,33 +132,30 @@ C_INCLUDES += \
 
 C_DEFS += \
 -DUSE_USBD_COMPOSITE \
--DUSBD_CMPSIT_ACTIVATE_CDC=1 \
--DUSBD_CMPSIT_ACTIVATE_HID=1 \
--DUSBD_CMPSIT_ACTIVATE_AUDIO=1 \
--DUSBD_CMPSIT_ACTIVATE_MIDI=1 \
+-DUSBD_CMPSIT_ACTIVATE_CDC=$(USBD_CMPSIT_ACTIVATE_CDC) \
+-DUSBD_CMPSIT_ACTIVATE_HID=$(USBD_CMPSIT_ACTIVATE_HID) \
+-DUSBD_CMPSIT_ACTIVATE_AUDIO=$(USBD_CMPSIT_ACTIVATE_AUDIO) \
+-DUSBD_CMPSIT_ACTIVATE_MIDI=$(USBD_CMPSIT_ACTIVATE_MIDI) \
 -DUSB_COMP_TEST_CDC=1 \
 -DUSB_COMP_TEST_HID=1 \
 -DUSB_COMP_TEST_AUDIO=1 \
 -DUSB_COMP_TEST_MIDI=1 \
--DUSB_COMP_AUDIO_CAPTURE_RING_SIZE=$(USB_COMP_AUDIO_CAPTURE_RING_SIZE) \
--DUSB_COMP_AUDIO_PLAYBACK_RING_SIZE=$(USB_COMP_AUDIO_PLAYBACK_RING_SIZE) \
 -DHID_FS_BINTERVAL=0x01U
 ```
 
-Set `USB_COMP_AUDIO_CAPTURE_RING_SIZE ?= 256` near the top of the Makefile.
-Use `512` for heavier apps or if capture timing still shows underruns.
-Set `USB_COMP_AUDIO_PLAYBACK_RING_SIZE ?= 512` for the USB playback ring.
-This is separate from the capture callback size and buffers host playback
-jitter.
+Omit `USB_COMP_AUDIO_CAPTURE_RING_SIZE` and `USB_COMP_AUDIO_PLAYBACK_RING_SIZE`
+for the default `512` frame capture ring and `512` frame playback ring. Only
+define one when overriding it.
 
 ## Audio Defaults
 
 - Audio rate: 48 kHz
 - Audio block size: 48 samples
 - USB audio packet: 48 stereo frames / 192 bytes every 1 ms
-- Capture ring: 256 stereo float frames / 2048 bytes in SRAM
+- Capture ring: 512 stereo float frames / 4096 bytes in SRAM
 - Playback ring: 512 usable stereo int16 frames / 2048 bytes in SRAM
 - Capture ring sizes must be powers of two and at least 128 frames
+- Playback ring sizes must be powers of two and at least 64 frames
 
 ## Build And Flash
 
@@ -168,5 +185,6 @@ Expected behavior:
 - USB audio capture records 48 kHz stereo data
 - USB audio playback opens without ALSA errors
 
-To keep interfaces present but stop generated test traffic, set the
-`USB_COMP_TEST_*` flags to `0`.
+To keep interfaces present but stop generated test traffic, remove the
+`USB_COMP_TEST_*` defines or set them to `0`. Undefined test flags default to
+off.
