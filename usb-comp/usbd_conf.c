@@ -52,8 +52,20 @@
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 PCD_HandleTypeDef hpcd_USB_OTG_HS;
+USBD_HandleTypeDef hUsbDeviceFS;
+USBD_HandleTypeDef hUsbDeviceHS;
 
-void Error_Handler(void) { while(1) {} }
+__attribute__((weak)) void USB_COMP_DebugFailC(int code)
+{
+    (void)code;
+    while(1) {}
+}
+
+void Error_Handler(void)
+{
+    USB_COMP_DebugFailC(14);
+    while(1) {}
+}
 
 USBD_StatusTypeDef USBD_Get_USB_Status(HAL_StatusTypeDef hal_status);
 
@@ -232,7 +244,11 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
         hpcd_USB_OTG_FS.Init.vbus_sensing_enable     = ENABLE;
         hpcd_USB_OTG_FS.Init.use_dedicated_ep1       = DISABLE;
 
-        if(HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK) { Error_Handler(); }
+        if(HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK)
+        {
+            USB_COMP_DebugFailC(15);
+            return USBD_FAIL;
+        }
 
         /* FIFO allocation (in 32-bit words, total FS FIFO = 320 words = 1280 B):
              Rx FIFO   = 0x5C words — shared OUT/control receive FIFO
@@ -272,7 +288,11 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
         hpcd_USB_OTG_HS.Init.use_dedicated_ep1       = DISABLE;
         hpcd_USB_OTG_HS.Init.use_external_vbus       = DISABLE;
 
-        if(HAL_PCD_Init(&hpcd_USB_OTG_HS) != HAL_OK) { Error_Handler(); }
+        if(HAL_PCD_Init(&hpcd_USB_OTG_HS) != HAL_OK)
+        {
+            USB_COMP_DebugFailC(16);
+            return USBD_FAIL;
+        }
 
         HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_HS, 0x80);
         HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 0, 0x40);

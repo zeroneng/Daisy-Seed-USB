@@ -1,6 +1,7 @@
 TARGET = UsbComp
 
 LIBDAISY_DIR = ../../libDaisy
+OPT = -Ofast
 ST_USB_DEVICE_DIR = vendor/stm32_mw_usb_device
 USB_COMP_ENABLE_CDC ?= 1
 USB_COMP_ENABLE_HID ?= 1

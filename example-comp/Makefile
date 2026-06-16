@@ -4,6 +4,7 @@ TARGET = ExampleComp
 # APP_TYPE = BOOT_QSPI
 
 LIBDAISY_DIR = ../../libDaisy
+OPT = -Ofast
 USB_COMP_DIR = ../usb-comp
 ST_USB_DEVICE_DIR = $(USB_COMP_DIR)/vendor/stm32_mw_usb_device
 USB_COMP_AUDIO_CAPTURE_RING_SIZE ?= 64

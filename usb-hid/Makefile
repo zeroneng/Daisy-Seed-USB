@@ -1,6 +1,7 @@
 TARGET = UsbHid
 
 LIBDAISY_DIR = ../../libDaisy
+OPT = -Ofast
 
 CPP_SOURCES = \
 UsbHid.cpp \

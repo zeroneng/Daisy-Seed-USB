@@ -80,6 +80,10 @@ uint32_t USBD_CMPSIT_GetClassID(USBD_HandleTypeDef *pdev,
 #define DSY_RAM_D2 __attribute__((section(".heap")))
 #endif
 
+#ifndef USB_COMP_DEBUG_FAIL
+#define USB_COMP_DEBUG_FAIL(code) do {} while(0)
+#endif
+
 namespace UsbComp
 {
 constexpr uint8_t kNoClass = 0xFFU;
@@ -155,52 +159,76 @@ static void Init()
     }
 #endif
 
-    USBD_Init(&hUsbDeviceHS, &HS_Desc, DEVICE_HS);
+    if(USBD_Init(&hUsbDeviceHS, &HS_Desc, DEVICE_HS) != USBD_OK)
+        USB_COMP_DEBUG_FAIL(1);
 
 #if USB_COMP_ENABLE_HID
-    USBD_RegisterClassComposite(&hUsbDeviceHS,
-                                USBD_HID_CLASS,
-                                CLASS_TYPE_HID,
-                                hid_ep_addr);
+    if(USBD_RegisterClassComposite(&hUsbDeviceHS,
+                                   USBD_HID_CLASS,
+                                   CLASS_TYPE_HID,
+                                   hid_ep_addr)
+       != USBD_OK)
+        USB_COMP_DEBUG_FAIL(2);
     hid_class_id = static_cast<uint8_t>(
         USBD_CMPSIT_GetClassID(&hUsbDeviceHS, CLASS_TYPE_HID, 0));
+    if(hid_class_id == kNoClass)
+        USB_COMP_DEBUG_FAIL(3);
 #endif
 
 #if USB_COMP_ENABLE_CDC
-    USBD_RegisterClassComposite(&hUsbDeviceHS,
-                                USBD_CDC_CLASS,
-                                CLASS_TYPE_CDC,
-                                cdc_ep_addr);
+    if(USBD_RegisterClassComposite(&hUsbDeviceHS,
+                                   USBD_CDC_CLASS,
+                                   CLASS_TYPE_CDC,
+                                   cdc_ep_addr)
+       != USBD_OK)
+        USB_COMP_DEBUG_FAIL(4);
     cdc_class_id = static_cast<uint8_t>(
         USBD_CMPSIT_SetClassID(&hUsbDeviceHS, CLASS_TYPE_CDC, 0));
+    if(cdc_class_id == kNoClass)
+        USB_COMP_DEBUG_FAIL(5);
     USB_COMP_CDC_SetClassId(cdc_class_id);
-    USBD_CDC_RegisterInterface(&hUsbDeviceHS, &USB_COMP_CDC_Interface_fops_HS);
+    if(USBD_CDC_RegisterInterface(&hUsbDeviceHS,
+                                  &USB_COMP_CDC_Interface_fops_HS)
+       != USBD_OK)
+        USB_COMP_DEBUG_FAIL(6);
     hUsbDeviceHS.classId = hUsbDeviceHS.NumClasses;
 #endif
 
 #if USB_COMP_ENABLE_AUDIO
-    USBD_RegisterClassComposite(&hUsbDeviceHS,
-                                USBD_AUDIO_CLASS,
-                                CLASS_TYPE_AUDIO,
-                                audio_ep_addr);
+    if(USBD_RegisterClassComposite(&hUsbDeviceHS,
+                                   USBD_AUDIO_CLASS,
+                                   CLASS_TYPE_AUDIO,
+                                   audio_ep_addr)
+       != USBD_OK)
+        USB_COMP_DEBUG_FAIL(7);
     audio_class_id = static_cast<uint8_t>(
         USBD_CMPSIT_SetClassID(&hUsbDeviceHS, CLASS_TYPE_AUDIO, 0));
-    USBD_AUDIO_RegisterInterface(&hUsbDeviceHS, &USBD_AUDIO_fops);
+    if(audio_class_id == kNoClass)
+        USB_COMP_DEBUG_FAIL(8);
+    if(USBD_AUDIO_RegisterInterface(&hUsbDeviceHS, &USBD_AUDIO_fops)
+       != USBD_OK)
+        USB_COMP_DEBUG_FAIL(9);
     hUsbDeviceHS.classId = hUsbDeviceHS.NumClasses;
 #endif
 
 #if USB_COMP_ENABLE_MIDI
-    USBD_RegisterClassComposite(&hUsbDeviceHS,
-                                USBD_MIDI_CLASS,
-                                CLASS_TYPE_MIDI,
-                                midi_ep_addr);
+    if(USBD_RegisterClassComposite(&hUsbDeviceHS,
+                                   USBD_MIDI_CLASS,
+                                   CLASS_TYPE_MIDI,
+                                   midi_ep_addr)
+       != USBD_OK)
+        USB_COMP_DEBUG_FAIL(10);
     midi_class_id = static_cast<uint8_t>(
         USBD_CMPSIT_SetClassID(&hUsbDeviceHS, CLASS_TYPE_MIDI, 0));
-    USBD_MIDI_RegisterInterface(&hUsbDeviceHS, &midi_fops);
+    if(midi_class_id == kNoClass)
+        USB_COMP_DEBUG_FAIL(11);
+    if(USBD_MIDI_RegisterInterface(&hUsbDeviceHS, &midi_fops) != USBD_OK)
+        USB_COMP_DEBUG_FAIL(12);
     hUsbDeviceHS.classId = hUsbDeviceHS.NumClasses;
 #endif
 
-    USBD_Start(&hUsbDeviceHS);
+    if(USBD_Start(&hUsbDeviceHS) != USBD_OK)
+        USB_COMP_DEBUG_FAIL(13);
 }
 
 #if USB_COMP_ENABLE_AUDIO

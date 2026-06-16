@@ -1,6 +1,7 @@
 TARGET = ExampleHid
 
 LIBDAISY_DIR = ../../libDaisy
+OPT = -Ofast
 USB_HID_DIR = ../usb-hid
 
 EXAMPLE_HID_TEST_KEYS ?= 1

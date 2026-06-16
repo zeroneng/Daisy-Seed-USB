@@ -2,6 +2,7 @@ TARGET = UsbCdc
 
 LIBDAISY_DIR = ../../libDaisy
 BUILD_DIR = build
+OPT = -Ofast
 
 CC = arm-none-eabi-gcc
 CXX = arm-none-eabi-g++
@@ -25,7 +26,7 @@ C_INCLUDES = \
 -I$(LIBDAISY_DIR)/Middlewares/Third_Party/FatFs/src \
 -I$(LIBDAISY_DIR)/core
 
-CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) -include stm32h7xx.h -O2 -Wall -Wno-missing-attributes -Wno-stringop-overflow -fdata-sections -ffunction-sections -g -ggdb -MMD -MP -std=gnu11
+CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) -include stm32h7xx.h $(OPT) -Wall -Wno-missing-attributes -Wno-stringop-overflow -fdata-sections -ffunction-sections -g -ggdb -MMD -MP -std=gnu11
 CPPFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti -fno-unwind-tables -fshort-enums -Wno-register -std=gnu++14
 LDFLAGS = $(MCU) --specs=nano.specs --specs=nosys.specs -T$(LIBDAISY_DIR)/core/STM32H750IB_flash.lds -L$(LIBDAISY_DIR)/build -ldaisy -lc -lm -lnosys -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections -Wl,--print-memory-usage
 
