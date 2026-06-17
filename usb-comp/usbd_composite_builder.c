@@ -38,6 +38,7 @@ EndBSPDependencies */
 
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_composite_builder.h"
+#include "usbd_desc.h"
 
 #ifndef HID_KEYBOARD_REPORT_DESC_SIZE
 #define HID_KEYBOARD_REPORT_DESC_SIZE 58U
@@ -835,7 +836,8 @@ static void  USBD_CMPSIT_HIDMouseDesc(USBD_HandleTypeDef *pdev, uint32_t pConf,
 
   /* Append HID keyboard Interface descriptor to Configuration descriptor */
   __USBD_CMPSIT_SET_IF(pdev->tclasslist[pdev->classId].Ifs[0], 0U, \
-                       (uint8_t)(pdev->tclasslist[pdev->classId].NumEps), 0x03U, 0x01U, 0x01U, 0U);
+                       (uint8_t)(pdev->tclasslist[pdev->classId].NumEps), 0x03U, 0x01U, 0x01U,
+                       USB_COMP_IDX_HID_STR);
 
   /* Append HID Functional descriptor to Configuration descriptor */
   pHidMouseDesc = ((USBD_HIDDescTypeDef *)(pConf + *Sze));
@@ -888,12 +890,13 @@ static void  USBD_CMPSIT_CDCDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __IO 
   pIadDesc->bFunctionClass          = 0x02U;
   pIadDesc->bFunctionSubClass       = 0x02U;
   pIadDesc->bFunctionProtocol       = 0x01U;
-  pIadDesc->iFunction               = 0U; /* String Index */
+  pIadDesc->iFunction               = USB_COMP_IDX_CDC_STR; /* String Index */
   *Sze                              += (uint32_t)sizeof(USBD_IadDescTypeDef);
 #endif /* USBD_COMPOSITE_USE_IAD == 1 */
 
   /* Control Interface Descriptor */
-  __USBD_CMPSIT_SET_IF(pdev->tclasslist[pdev->classId].Ifs[0], 0U, 1U, 0x02, 0x02U, 0x01U, 0U);
+  __USBD_CMPSIT_SET_IF(pdev->tclasslist[pdev->classId].Ifs[0], 0U, 1U, 0x02, 0x02U, 0x01U,
+                       USB_COMP_IDX_CDC_STR);
 
   /* Control interface headers */
   pHeadDesc = ((USBD_CDCHeaderFuncDescTypeDef *)((uint32_t)pConf + *Sze));
@@ -935,7 +938,8 @@ static void  USBD_CMPSIT_CDCDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __IO 
                        USBD_EP_TYPE_INTR, CDC_CMD_PACKET_SIZE, CDC_HS_BINTERVAL, CDC_FS_BINTERVAL);
 
   /* Data Interface Descriptor */
-  __USBD_CMPSIT_SET_IF(pdev->tclasslist[pdev->classId].Ifs[1], 0U, 2U, 0x0A, 0U, 0U, 0U);
+  __USBD_CMPSIT_SET_IF(pdev->tclasslist[pdev->classId].Ifs[1], 0U, 2U, 0x0A, 0U, 0U,
+                       USB_COMP_IDX_CDC_STR);
 
   if (speed == (uint8_t)USBD_SPEED_HIGH)
   {
@@ -1113,7 +1117,7 @@ static void  USBD_CMPSIT_AUDIODesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __I
 #if USBD_COMPOSITE_USE_IAD == 1
   const uint8_t iad[] = {
     0x08U, USB_DESC_TYPE_IAD, ac_if, 0x03U,
-    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOCONTROL, AUDIO_PROTOCOL_UNDEFINED, 0x00U,
+    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOCONTROL, AUDIO_PROTOCOL_UNDEFINED, USB_COMP_IDX_AUDIO_STR,
   };
   USBD_memcpy(desc + idx, iad, sizeof(iad));
   idx += (uint32_t)sizeof(iad);
@@ -1122,7 +1126,7 @@ static void  USBD_CMPSIT_AUDIODesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __I
   const uint8_t audio_desc[] = {
     /* AC interface */
     0x09U, USB_DESC_TYPE_INTERFACE, ac_if, 0x00U, 0x00U,
-    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOCONTROL, AUDIO_PROTOCOL_UNDEFINED, 0x00U,
+    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOCONTROL, AUDIO_PROTOCOL_UNDEFINED, USB_COMP_IDX_AUDIO_STR,
 
     /* AC header: playback and capture streaming interfaces */
     0x0AU, AUDIO_INTERFACE_DESCRIPTOR_TYPE, AUDIO_CONTROL_HEADER,
@@ -1131,21 +1135,21 @@ static void  USBD_CMPSIT_AUDIODesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __I
 
     /* USB OUT terminal pair: host -> Daisy playback */
     0x0CU, AUDIO_INTERFACE_DESCRIPTOR_TYPE, AUDIO_CONTROL_INPUT_TERMINAL,
-    0x01U, 0x01U, 0x01U, 0x00U, 0x02U, 0x03U, 0x00U, 0x00U, 0x00U,
+    0x01U, 0x01U, 0x01U, 0x00U, 0x02U, 0x03U, 0x00U, 0x00U, USB_COMP_IDX_AUDIO_STR,
     0x09U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, AUDIO_CONTROL_OUTPUT_TERMINAL,
-    0x02U, 0x01U, 0x03U, 0x00U, 0x01U, 0x00U,
+    0x02U, 0x01U, 0x03U, 0x00U, 0x01U, USB_COMP_IDX_AUDIO_STR,
 
     /* USB IN terminal pair: Daisy capture -> host */
     0x0CU, AUDIO_INTERFACE_DESCRIPTOR_TYPE, AUDIO_CONTROL_INPUT_TERMINAL,
-    0x03U, 0x01U, 0x02U, 0x00U, 0x02U, 0x03U, 0x00U, 0x00U, 0x00U,
+    0x03U, 0x01U, 0x02U, 0x00U, 0x02U, 0x03U, 0x00U, 0x00U, USB_COMP_IDX_AUDIO_STR,
     0x09U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, AUDIO_CONTROL_OUTPUT_TERMINAL,
-    0x04U, 0x01U, 0x01U, 0x00U, 0x03U, 0x00U,
+    0x04U, 0x01U, 0x01U, 0x00U, 0x03U, USB_COMP_IDX_AUDIO_STR,
 
     /* AS OUT interface */
     0x09U, USB_DESC_TYPE_INTERFACE, out_if, 0x00U, 0x00U,
-    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOSTREAMING, AUDIO_PROTOCOL_UNDEFINED, 0x00U,
+    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOSTREAMING, AUDIO_PROTOCOL_UNDEFINED, USB_COMP_IDX_AUDIO_STR,
     0x09U, USB_DESC_TYPE_INTERFACE, out_if, 0x01U, 0x01U,
-    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOSTREAMING, AUDIO_PROTOCOL_UNDEFINED, 0x00U,
+    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOSTREAMING, AUDIO_PROTOCOL_UNDEFINED, USB_COMP_IDX_AUDIO_STR,
     0x07U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, AUDIO_STREAMING_GENERAL,
     0x01U, 0x01U, 0x01U, 0x00U,
     0x0BU, AUDIO_INTERFACE_DESCRIPTOR_TYPE, AUDIO_STREAMING_FORMAT_TYPE,
@@ -1157,9 +1161,9 @@ static void  USBD_CMPSIT_AUDIODesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __I
 
     /* AS IN interface */
     0x09U, USB_DESC_TYPE_INTERFACE, in_if, 0x00U, 0x00U,
-    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOSTREAMING, AUDIO_PROTOCOL_UNDEFINED, 0x00U,
+    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOSTREAMING, AUDIO_PROTOCOL_UNDEFINED, USB_COMP_IDX_AUDIO_STR,
     0x09U, USB_DESC_TYPE_INTERFACE, in_if, 0x01U, 0x01U,
-    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOSTREAMING, AUDIO_PROTOCOL_UNDEFINED, 0x00U,
+    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOSTREAMING, AUDIO_PROTOCOL_UNDEFINED, USB_COMP_IDX_AUDIO_STR,
     0x07U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, AUDIO_STREAMING_GENERAL,
     0x04U, 0x01U, 0x01U, 0x00U,
     0x0BU, AUDIO_INTERFACE_DESCRIPTOR_TYPE, AUDIO_STREAMING_FORMAT_TYPE,
@@ -1203,7 +1207,7 @@ static void  USBD_CMPSIT_MIDIDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __IO
 #if USBD_COMPOSITE_USE_IAD == 1
   const uint8_t iad[] = {
     0x08U, USB_DESC_TYPE_IAD, ac_if, 0x02U,
-    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOCONTROL, AUDIO_PROTOCOL_UNDEFINED, 0x00U,
+    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOCONTROL, AUDIO_PROTOCOL_UNDEFINED, USB_COMP_IDX_MIDI_STR,
   };
   USBD_memcpy(desc + idx, iad, sizeof(iad));
   idx += (uint32_t)sizeof(iad);
@@ -1212,23 +1216,23 @@ static void  USBD_CMPSIT_MIDIDesc(USBD_HandleTypeDef *pdev, uint32_t pConf, __IO
   const uint8_t midi_desc[] = {
     /* Audio Control interface for the MIDIStreaming collection */
     0x09U, USB_DESC_TYPE_INTERFACE, ac_if, 0x00U, 0x00U,
-    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOCONTROL, AUDIO_PROTOCOL_UNDEFINED, 0x00U,
+    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOCONTROL, AUDIO_PROTOCOL_UNDEFINED, USB_COMP_IDX_MIDI_STR,
     0x09U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, 0x01U,
     0x00U, 0x01U, 0x09U, 0x00U, 0x01U, ms_if,
 
     /* MIDIStreaming interface */
     0x09U, USB_DESC_TYPE_INTERFACE, ms_if, 0x00U, 0x02U,
-    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_MIDISTREAMING, AUDIO_PROTOCOL_UNDEFINED, 0x00U,
+    USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_MIDISTREAMING, AUDIO_PROTOCOL_UNDEFINED, USB_COMP_IDX_MIDI_STR,
     0x07U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_STREAMING_HEADER,
     0x00U, 0x01U, 0x41U, 0x00U,
 
     /* Embedded/external MIDI IN jacks */
-    0x06U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_IN_JACK, 0x01U, 0x01U, 0x00U,
-    0x06U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_IN_JACK, 0x02U, 0x02U, 0x00U,
+    0x06U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_IN_JACK, 0x01U, 0x01U, USB_COMP_IDX_MIDI_STR,
+    0x06U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_IN_JACK, 0x02U, 0x02U, USB_COMP_IDX_MIDI_STR,
 
     /* Embedded/external MIDI OUT jacks */
-    0x09U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_OUT_JACK, 0x01U, 0x03U, 0x01U, 0x02U, 0x01U, 0x00U,
-    0x09U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_OUT_JACK, 0x02U, 0x06U, 0x01U, 0x01U, 0x01U, 0x00U,
+    0x09U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_OUT_JACK, 0x01U, 0x03U, 0x01U, 0x02U, 0x01U, USB_COMP_IDX_MIDI_STR,
+    0x09U, AUDIO_INTERFACE_DESCRIPTOR_TYPE, MIDI_OUT_JACK, 0x02U, 0x06U, 0x01U, 0x01U, 0x01U, USB_COMP_IDX_MIDI_STR,
 
     /* OUT endpoint: host -> device */
     0x09U, USB_DESC_TYPE_ENDPOINT, out_ep, USBD_EP_TYPE_BULK,

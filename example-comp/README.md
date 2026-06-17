@@ -149,6 +149,14 @@ USBD_CMPSIT_ACTIVATE_CDC ?= 1
 USBD_CMPSIT_ACTIVATE_HID ?= 1
 USBD_CMPSIT_ACTIVATE_AUDIO ?= 1
 USBD_CMPSIT_ACTIVATE_MIDI ?= 1
+USB_COMP_MANUFACTURER ?= Generic
+USB_COMP_PRODUCT ?= USB Composite
+USB_COMP_CONFIGURATION ?= Composite Config
+USB_COMP_INTERFACE ?= Composite Interface
+USB_COMP_CDC ?= Composite CDC
+USB_COMP_HID ?= Composite HID Keyboard
+USB_COMP_AUDIO ?= Composite Audio
+USB_COMP_MIDI ?= Composite MIDI
 
 C_SOURCES += \
 $(USB_COMP_DIR)/usbd_conf.c \
@@ -193,12 +201,36 @@ C_DEFS += \
 -DUSBD_CMPSIT_ACTIVATE_HID=$(USBD_CMPSIT_ACTIVATE_HID) \
 -DUSBD_CMPSIT_ACTIVATE_AUDIO=$(USBD_CMPSIT_ACTIVATE_AUDIO) \
 -DUSBD_CMPSIT_ACTIVATE_MIDI=$(USBD_CMPSIT_ACTIVATE_MIDI) \
+'-DUSB_COMP_MANUFACTURER_STRING="$(USB_COMP_MANUFACTURER)"' \
+'-DUSB_COMP_PRODUCT_STRING="$(USB_COMP_PRODUCT)"' \
+'-DUSB_COMP_CONFIGURATION_STRING="$(USB_COMP_CONFIGURATION)"' \
+'-DUSB_COMP_INTERFACE_STRING="$(USB_COMP_INTERFACE)"' \
+'-DUSB_COMP_CDC_STRING="$(USB_COMP_CDC)"' \
+'-DUSB_COMP_HID_STRING="$(USB_COMP_HID)"' \
+'-DUSB_COMP_AUDIO_STRING="$(USB_COMP_AUDIO)"' \
+'-DUSB_COMP_MIDI_STRING="$(USB_COMP_MIDI)"' \
 -DUSB_COMP_TEST_CDC=1 \
 -DUSB_COMP_TEST_HID=1 \
 -DUSB_COMP_TEST_AUDIO=1 \
 -DUSB_COMP_TEST_MIDI=1 \
 -DHID_FS_BINTERVAL=0x01U
 ```
+
+Override the USB text from the app Makefile:
+
+```make
+USB_COMP_MANUFACTURER = ZERONE
+USB_COMP_PRODUCT = RHYTHM
+USB_COMP_CONFIGURATION = RHYTHM Composite
+USB_COMP_INTERFACE = RHYTHM USB
+USB_COMP_CDC = RHYTHM CDC
+USB_COMP_HID = RHYTHM Keyboard
+USB_COMP_AUDIO = RHYTHM Audio
+USB_COMP_MIDI = MIDI
+```
+
+Some MIDI monitors display `USB_COMP_PRODUCT` plus `USB_COMP_MIDI`, so
+`RHYTHM` + `MIDI` appears as `RHYTHM MIDI`.
 
 Omit `USB_COMP_AUDIO_CAPTURE_RING_SIZE` and `USB_COMP_AUDIO_PLAYBACK_RING_SIZE`
 for the default `512` frame capture ring and `512` frame playback ring. Only
@@ -229,9 +261,9 @@ PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make progra
 lsusb | grep '0483:5764'
 ls -l /dev/serial/by-id | grep 'USB_Composite'
 ls -l /dev/input/by-id | grep 'USB_Composite.*event-kbd'
-aplay -l | grep -A1 'USB Composite Sample'
-arecord -l | grep -A1 'USB Composite Sample'
-amidi -l | grep 'USB Composite Sample'
+aplay -l | grep -A1 'USB Composite'
+arecord -l | grep -A1 'USB Composite'
+amidi -l | grep 'USB Composite'
 ```
 
 Expected behavior:

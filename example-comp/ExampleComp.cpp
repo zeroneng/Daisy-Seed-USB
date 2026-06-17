@@ -1,3 +1,4 @@
+#include "Debug.h"
 #include "daisy_seed.h"
 #include "usb-comp.h"
 
@@ -105,11 +106,12 @@ int main()
             const UsbMidiEvent event = midi_rx_queue[midi_rx_read];
             midi_rx_read = (midi_rx_read + 1) & kMidiRxQueueMask;
 
-            UsbComp::CDCSend("MIDI RX %02X %02X %02X %02X",
-                             event.cin,
-                             event.status,
-                             event.data1,
-                             event.data2);
+            DBGPRINT(hw,
+                     "MIDI RX %02X %02X %02X %02X",
+                     event.cin,
+                     event.status,
+                     event.data1,
+                     event.data2);
         }
 
         const uint32_t now = System::GetNow();

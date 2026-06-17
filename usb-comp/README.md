@@ -107,6 +107,14 @@ USBD_CMPSIT_ACTIVATE_CDC ?= 1
 USBD_CMPSIT_ACTIVATE_HID ?= 1
 USBD_CMPSIT_ACTIVATE_AUDIO ?= 1
 USBD_CMPSIT_ACTIVATE_MIDI ?= 1
+USB_COMP_MANUFACTURER ?= Generic
+USB_COMP_PRODUCT ?= USB Composite
+USB_COMP_CONFIGURATION ?= Composite Config
+USB_COMP_INTERFACE ?= Composite Interface
+USB_COMP_CDC ?= Composite CDC
+USB_COMP_HID ?= Composite HID Keyboard
+USB_COMP_AUDIO ?= Composite Audio
+USB_COMP_MIDI ?= Composite MIDI
 
 C_SOURCES += \
 $(USB_COMP_DIR)/usbd_conf.c \
@@ -153,11 +161,38 @@ C_DEFS += \
 -DUSBD_CMPSIT_ACTIVATE_HID=$(USBD_CMPSIT_ACTIVATE_HID) \
 -DUSBD_CMPSIT_ACTIVATE_AUDIO=$(USBD_CMPSIT_ACTIVATE_AUDIO) \
 -DUSBD_CMPSIT_ACTIVATE_MIDI=$(USBD_CMPSIT_ACTIVATE_MIDI) \
+'-DUSB_COMP_MANUFACTURER_STRING="$(USB_COMP_MANUFACTURER)"' \
+'-DUSB_COMP_PRODUCT_STRING="$(USB_COMP_PRODUCT)"' \
+'-DUSB_COMP_CONFIGURATION_STRING="$(USB_COMP_CONFIGURATION)"' \
+'-DUSB_COMP_INTERFACE_STRING="$(USB_COMP_INTERFACE)"' \
+'-DUSB_COMP_CDC_STRING="$(USB_COMP_CDC)"' \
+'-DUSB_COMP_HID_STRING="$(USB_COMP_HID)"' \
+'-DUSB_COMP_AUDIO_STRING="$(USB_COMP_AUDIO)"' \
+'-DUSB_COMP_MIDI_STRING="$(USB_COMP_MIDI)"' \
 -DHID_FS_BINTERVAL=0x01U
 ```
 
 Keep `-I$(USB_COMP_DIR)` before libDaisy USB includes so the local
 `usbd_conf.h` is used.
+
+Set the `USB_COMP_*` text variables in your app Makefile to control the USB
+manufacturer, product, configuration, shared interface string, and class-level
+interface strings. Keep the quoted `-D...STRING="$(...)"` form so strings with
+spaces stay one compiler argument:
+
+```make
+USB_COMP_MANUFACTURER = ZERONE
+USB_COMP_PRODUCT = RHYTHM
+USB_COMP_CONFIGURATION = RHYTHM Composite
+USB_COMP_INTERFACE = RHYTHM USB
+USB_COMP_CDC = RHYTHM CDC
+USB_COMP_HID = RHYTHM Keyboard
+USB_COMP_AUDIO = RHYTHM Audio
+USB_COMP_MIDI = MIDI
+```
+
+Some MIDI monitors display `USB_COMP_PRODUCT` plus `USB_COMP_MIDI`, so
+`RHYTHM` + `MIDI` appears as `RHYTHM MIDI`.
 
 `USB_COMP_TEST_CDC`, `USB_COMP_TEST_HID`, `USB_COMP_TEST_AUDIO`, and
 `USB_COMP_TEST_MIDI` default to `0`. Only define one as `1` in a validation app
@@ -263,7 +298,7 @@ Manual checks:
 lsusb | grep '0483:5764'
 ls -l /dev/serial/by-id | grep 'USB_Composite'
 ls -l /dev/input/by-id | grep 'USB_Composite.*event-kbd'
-aplay -l | grep -A1 'USB Composite Sample'
-arecord -l | grep -A1 'USB Composite Sample'
-amidi -l | grep 'USB Composite Sample'
+aplay -l | grep -A1 'USB Composite'
+arecord -l | grep -A1 'USB Composite'
+amidi -l | grep 'USB Composite'
 ```

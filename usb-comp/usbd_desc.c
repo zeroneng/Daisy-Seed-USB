@@ -9,19 +9,76 @@
 #include "usbd_desc.h"
 #include "usbd_conf.h"
 
-#define USBD_VID                     1155
-#define USBD_LANGID_STRING           1033
-#define USBD_MANUFACTURER_STRING     "Generic"
+#define USBD_VID           1155
+#define USBD_LANGID_STRING 1033
+
+#ifndef USB_COMP_MANUFACTURER_STRING
+#define USB_COMP_MANUFACTURER_STRING "Generic"
+#endif
+
+#ifndef USB_COMP_PRODUCT_STRING
+#error "USB_COMP_PRODUCT_STRING must be defined by the Makefile"
+#endif
+
+#ifndef USB_COMP_CONFIGURATION_STRING
+#define USB_COMP_CONFIGURATION_STRING "Composite Config"
+#endif
+
+#ifndef USB_COMP_INTERFACE_STRING
+#define USB_COMP_INTERFACE_STRING "Composite Interface"
+#endif
+
+#ifndef USB_COMP_CDC_STRING
+#define USB_COMP_CDC_STRING "Composite CDC"
+#endif
+
+#ifndef USB_COMP_HID_STRING
+#define USB_COMP_HID_STRING "Composite HID Keyboard"
+#endif
+
+#ifndef USB_COMP_AUDIO_STRING
+#define USB_COMP_AUDIO_STRING "Composite Audio"
+#endif
+
+#ifndef USB_COMP_MIDI_STRING
+#define USB_COMP_MIDI_STRING "Composite MIDI"
+#endif
+
+#ifndef USB_COMP_PRODUCT_STRING_FS
+#define USB_COMP_PRODUCT_STRING_FS USB_COMP_PRODUCT_STRING
+#endif
+
+#ifndef USB_COMP_PRODUCT_STRING_HS
+#define USB_COMP_PRODUCT_STRING_HS USB_COMP_PRODUCT_STRING
+#endif
+
+#ifndef USB_COMP_CONFIGURATION_STRING_FS
+#define USB_COMP_CONFIGURATION_STRING_FS USB_COMP_CONFIGURATION_STRING
+#endif
+
+#ifndef USB_COMP_CONFIGURATION_STRING_HS
+#define USB_COMP_CONFIGURATION_STRING_HS USB_COMP_CONFIGURATION_STRING
+#endif
+
+#ifndef USB_COMP_INTERFACE_STRING_FS
+#define USB_COMP_INTERFACE_STRING_FS USB_COMP_INTERFACE_STRING
+#endif
+
+#ifndef USB_COMP_INTERFACE_STRING_HS
+#define USB_COMP_INTERFACE_STRING_HS USB_COMP_INTERFACE_STRING
+#endif
+
+#define USBD_MANUFACTURER_STRING USB_COMP_MANUFACTURER_STRING
 
 #define USBD_PID_FS                  0x5760
-#define USBD_PRODUCT_STRING_FS       "USB Composite Sample"
-#define USBD_CONFIGURATION_STRING_FS "Composite Config"
-#define USBD_INTERFACE_STRING_FS     "Composite Interface"
+#define USBD_PRODUCT_STRING_FS       USB_COMP_PRODUCT_STRING_FS
+#define USBD_CONFIGURATION_STRING_FS USB_COMP_CONFIGURATION_STRING_FS
+#define USBD_INTERFACE_STRING_FS     USB_COMP_INTERFACE_STRING_FS
 
 #define USBD_PID_HS                  0x5764
-#define USBD_PRODUCT_STRING_HS       "USB Composite Sample"
-#define USBD_CONFIGURATION_STRING_HS "Composite Config"
-#define USBD_INTERFACE_STRING_HS     "Composite Interface"
+#define USBD_PRODUCT_STRING_HS       USB_COMP_PRODUCT_STRING_HS
+#define USBD_CONFIGURATION_STRING_HS USB_COMP_CONFIGURATION_STRING_HS
+#define USBD_INTERFACE_STRING_HS     USB_COMP_INTERFACE_STRING_HS
 
 #define DEVICE_ID1 (UID_BASE)
 #define DEVICE_ID2 (UID_BASE + 0x4)
@@ -35,6 +92,9 @@ uint8_t *USBD_FS_ProductStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length)
 uint8_t *USBD_FS_SerialStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
 uint8_t *USBD_FS_ConfigStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
 uint8_t *USBD_FS_InterfaceStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
+#if (USBD_CLASS_USER_STRING_DESC == 1)
+uint8_t *USBD_FS_UserStrDescriptor(USBD_SpeedTypeDef speed, uint8_t idx, uint16_t *length);
+#endif
 
 uint8_t *USBD_HS_DeviceDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
 uint8_t *USBD_HS_LangIDStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
@@ -43,6 +103,9 @@ uint8_t *USBD_HS_ProductStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length)
 uint8_t *USBD_HS_SerialStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
 uint8_t *USBD_HS_ConfigStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
 uint8_t *USBD_HS_InterfaceStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *length);
+#if (USBD_CLASS_USER_STRING_DESC == 1)
+uint8_t *USBD_HS_UserStrDescriptor(USBD_SpeedTypeDef speed, uint8_t idx, uint16_t *length);
+#endif
 
 USBD_DescriptorsTypeDef FS_Desc = {
     USBD_FS_DeviceDescriptor,
@@ -52,6 +115,9 @@ USBD_DescriptorsTypeDef FS_Desc = {
     USBD_FS_SerialStrDescriptor,
     USBD_FS_ConfigStrDescriptor,
     USBD_FS_InterfaceStrDescriptor,
+#if (USBD_CLASS_USER_STRING_DESC == 1)
+    USBD_FS_UserStrDescriptor,
+#endif
 };
 
 USBD_DescriptorsTypeDef HS_Desc = {
@@ -62,6 +128,9 @@ USBD_DescriptorsTypeDef HS_Desc = {
     USBD_HS_SerialStrDescriptor,
     USBD_HS_ConfigStrDescriptor,
     USBD_HS_InterfaceStrDescriptor,
+#if (USBD_CLASS_USER_STRING_DESC == 1)
+    USBD_HS_UserStrDescriptor,
+#endif
 };
 
 #if defined ( __ICCARM__ )
@@ -179,6 +248,34 @@ uint8_t *USBD_FS_InterfaceStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *lengt
     return USBD_StrDesc;
 }
 
+#if (USBD_CLASS_USER_STRING_DESC == 1)
+uint8_t *USBD_FS_UserStrDescriptor(USBD_SpeedTypeDef speed, uint8_t idx, uint16_t *length)
+{
+    (void)speed;
+
+    switch(idx)
+    {
+        case USB_COMP_IDX_CDC_STR:
+            USBD_GetString((uint8_t *)USB_COMP_CDC_STRING, USBD_StrDesc, length);
+            break;
+        case USB_COMP_IDX_HID_STR:
+            USBD_GetString((uint8_t *)USB_COMP_HID_STRING, USBD_StrDesc, length);
+            break;
+        case USB_COMP_IDX_AUDIO_STR:
+            USBD_GetString((uint8_t *)USB_COMP_AUDIO_STRING, USBD_StrDesc, length);
+            break;
+        case USB_COMP_IDX_MIDI_STR:
+            USBD_GetString((uint8_t *)USB_COMP_MIDI_STRING, USBD_StrDesc, length);
+            break;
+        default:
+            USBD_GetString((uint8_t *)USBD_INTERFACE_STRING_FS, USBD_StrDesc, length);
+            break;
+    }
+
+    return USBD_StrDesc;
+}
+#endif
+
 uint8_t *USBD_HS_DeviceDescriptor(USBD_SpeedTypeDef speed, uint16_t *length)
 {
     (void)speed;
@@ -209,3 +306,10 @@ uint8_t *USBD_HS_InterfaceStrDescriptor(USBD_SpeedTypeDef speed, uint16_t *lengt
     USBD_GetString((uint8_t *)USBD_INTERFACE_STRING_HS, USBD_StrDesc, length);
     return USBD_StrDesc;
 }
+
+#if (USBD_CLASS_USER_STRING_DESC == 1)
+uint8_t *USBD_HS_UserStrDescriptor(USBD_SpeedTypeDef speed, uint8_t idx, uint16_t *length)
+{
+    return USBD_FS_UserStrDescriptor(speed, idx, length);
+}
+#endif
