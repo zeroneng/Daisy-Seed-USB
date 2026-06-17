@@ -95,7 +95,11 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
             memcpy(pbuf, line_coding_hs, sizeof(line_coding_hs));
             break;
         case CDC_SET_CONTROL_LINE_STATE:
+        {
+            const USBD_SetupReqTypedef* req = (const USBD_SetupReqTypedef*)pbuf;
+            cdc_connected_hs = ((req->wValue & 0x0001U) != 0U) ? 1U : 0U;
             break;
+        }
         default:
             break;
     }
@@ -122,7 +126,7 @@ static int8_t CDC_Receive_HS_Int(uint8_t* pbuf, uint32_t* Len)
 uint8_t CDC_Transmit_HS(uint8_t* Buf, uint16_t Len)
 {
     USBD_CDC_HandleTypeDef* hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceHS.pClassDataCmsit[cdc_class_id_hs];
-    if(cdc_connected_hs == 0U || hcdc == NULL || hcdc->TxState != 0U)
+    if(hcdc == NULL || hcdc->TxState != 0U)
         return USBD_BUSY;
     USBD_CDC_SetTxBuffer(&hUsbDeviceHS, Buf, Len, cdc_class_id_hs);
     return USBD_CDC_TransmitPacket(&hUsbDeviceHS, cdc_class_id_hs);

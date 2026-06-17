@@ -61,10 +61,11 @@ and other deferred USB work can flush outside USB callbacks.
 
 ## CDC, HID, And MIDI Examples
 
-Send text to the host CDC ACM serial port:
+Send formatted lines to the host CDC ACM serial port:
 
 ```cpp
-UsbComp::SendCdc("example-comp online\r\n");
+UsbComp::CDCSend("example-comp online");
+UsbComp::CDCSend("tempo %lu", tempo);
 ```
 
 Send a single HID keyboard key press and release with NKRO report functions:

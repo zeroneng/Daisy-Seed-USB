@@ -27,7 +27,8 @@ MSC is not part of this stack.
 UsbComp::Init();
 UsbComp::Process();
 
-UsbComp::SendCdc("text\r\n");
+UsbComp::CDCSend("text %lu", value);
+UsbComp::SendCdc("raw text");
 
 UsbComp::SetHidKeyState(keycode, pressed);
 UsbComp::SendHidReport();
@@ -41,11 +42,15 @@ UsbComp::PopPlayback(left, right);
 UsbComp::CommitCaptureBlock();
 ```
 
-CDC sends null-terminated text to the host serial port:
+CDC formatted line send works like Daisy `PrintLine`: it accepts printf-style
+arguments and appends `\r\n`:
 
 ```cpp
-UsbComp::SendCdc("RHYTHM ready\r\n");
+UsbComp::CDCSend("RHYTHM tempo %lu", tempo);
 ```
+
+Use `SendCdc()` only when you want to send raw null-terminated text exactly as
+provided.
 
 HID uses USB HID keycodes. Set key state, then send the NKRO report:
 

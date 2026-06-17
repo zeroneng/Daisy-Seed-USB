@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include <cstdarg>
+#include <cstdio>
 #include <cstring>
 
 #ifndef USBD_CMPSIT_ACTIVATE_CDC
@@ -258,7 +260,7 @@ static void PopPlayback(float& left, float& right)
 #if USBD_CMPSIT_ACTIVATE_CDC
 static inline bool SendCdc(const char* text)
 {
-    if(text == nullptr || cdc_class_id == kNoClass || !USB_COMP_CDC_IsConnected())
+    if(text == nullptr || cdc_class_id == kNoClass)
         return false;
 
     uint16_t len = 0;
@@ -267,8 +269,49 @@ static inline bool SendCdc(const char* text)
 
     return CDC_Transmit_HS((uint8_t*)text, len) == USBD_OK;
 }
+
+static inline bool SendCdcLineV(const char* format, va_list args)
+{
+    if(format == nullptr)
+        return false;
+
+    char line[256];
+    int written = std::vsnprintf(line, sizeof(line), format, args);
+    if(written < 0)
+        return false;
+
+    int len = written;
+    if(len > static_cast<int>(sizeof(line) - 3U))
+        len = static_cast<int>(sizeof(line) - 3U);
+
+    line[len++] = '\r';
+    line[len++] = '\n';
+    line[len] = '\0';
+
+    return SendCdc(line);
+}
+
+static inline bool SendCdcLine(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    const bool sent = SendCdcLineV(format, args);
+    va_end(args);
+    return sent;
+}
+
+static inline bool CDCSend(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    const bool sent = SendCdcLineV(format, args);
+    va_end(args);
+    return sent;
+}
 #else
 static inline bool SendCdc(const char*) { return false; }
+static inline bool SendCdcLine(const char*, ...) { return false; }
+static inline bool CDCSend(const char*, ...) { return false; }
 #endif
 
 #if USBD_CMPSIT_ACTIVATE_HID

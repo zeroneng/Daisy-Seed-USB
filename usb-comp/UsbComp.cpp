@@ -264,7 +264,7 @@ void InitUSBComposite()
 bool SendCdcString(const char* s)
 {
 #if USBD_CMPSIT_ACTIVATE_CDC
-    if(!s || cdc_class_id == kNoClass || !USB_COMP_CDC_IsConnected())
+    if(!s || cdc_class_id == kNoClass)
         return false;
 
     return CDC_Transmit_HS((uint8_t*)s, (uint16_t)strlen(s)) == USBD_OK;

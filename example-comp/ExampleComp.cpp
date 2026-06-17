@@ -2,7 +2,6 @@
 #include "usb-comp.h"
 
 #include <cmath>
-#include <cstdio>
 
 using namespace daisy;
 
@@ -106,15 +105,11 @@ int main()
             const UsbMidiEvent event = midi_rx_queue[midi_rx_read];
             midi_rx_read = (midi_rx_read + 1) & kMidiRxQueueMask;
 
-            char line[64];
-            std::snprintf(line,
-                          sizeof(line),
-                          "MIDI RX %02X %02X %02X %02X\r\n",
-                          event.cin,
-                          event.status,
-                          event.data1,
-                          event.data2);
-            UsbComp::SendCdc(line);
+            UsbComp::CDCSend("MIDI RX %02X %02X %02X %02X",
+                             event.cin,
+                             event.status,
+                             event.data1,
+                             event.data2);
         }
 
         const uint32_t now = System::GetNow();
