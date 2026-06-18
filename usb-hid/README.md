@@ -90,7 +90,7 @@ int main()
 ## Build And Test
 
 ```bash
-cd /mnt/clu-nas/developer/daisy-usb/usb-hid
+cd /mnt/clu-nas/developer/Daisy-Seed-USB/usb-hid
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make clean
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make -j2
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make program

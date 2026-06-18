@@ -249,7 +249,7 @@ define one when overriding it.
 ## Build And Flash
 
 ```bash
-cd /mnt/clu-nas/developer/daisy-usb/example-comp
+cd /mnt/clu-nas/developer/Daisy-Seed-USB/example-comp
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make clean
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make -j2
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make program

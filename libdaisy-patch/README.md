@@ -12,9 +12,9 @@ Purpose:
   local replacements without duplicate-symbol link errors
 
 Important:
-- the actual `usb-hid` project files belong in `daisy-usb/usb-hid/`
+- the actual `usb-hid` project files belong in `Daisy-Seed-USB/usb-hid/`
 - they should not be duplicated here
-- the current `daisy-usb/usb-hid` build does not compile its old local
+- the current `Daisy-Seed-USB/usb-hid` build does not compile its old local
   `usb_irq_override.c`; it uses libDaisy's FS USB IRQ handlers instead
 
 ## Current recommendation

@@ -280,7 +280,7 @@ from the local `usbd_conf.o` built from this `usb-comp` directory.
 ## Build And Test
 
 ```bash
-cd /mnt/clu-nas/developer/daisy-usb/usb-comp
+cd /mnt/clu-nas/developer/Daisy-Seed-USB/usb-comp
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make clean
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make -j2
 PATH=/home/pi/Developer/gcc-arm-none-eabi-10-2020-q4-major/bin:$PATH make program

@@ -1,4 +1,4 @@
-# daisy-usb
+# Daisy-Seed-USB
 
 USB experiments for the Daisy Seed.
 
@@ -8,15 +8,14 @@ on the Daisy Seed external USB port.
 ## Current Projects
 
 - `example-comp` - internal-flash app that reuses the shared `usb-comp` stack.
-- `example-hid` - simple blink app that reuses the standalone `usb-hid` stack.
 - `usb-comp` - composite CDC, HID, audio, MIDI, and optional MSC reference.
 - `usb-cdc` - standalone CDC ACM reference.
 - `usb-hid` - standalone HID keyboard/reference path.
 - `libdaisy-patch` - reference patch copy for optional libDaisy USB IRQ handler changes.
 
-The removed standalone audio, MIDI, DFU, MSC, and top-level vendor experiments
-are not part of the active tree anymore. Recoverable copies were moved to the
-NAS trash during cleanup.
+The removed standalone audio, MIDI, DFU, MSC, `example-hid`, and top-level
+vendor experiments are not part of the active tree anymore. Recoverable copies
+were moved to the NAS trash during cleanup.
 
 Most of this code was written or modified with the help of AI agents. Use at
 your own risk, test carefully, and verify behavior before using it in production
