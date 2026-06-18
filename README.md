@@ -5,6 +5,21 @@ USB experiments for the Daisy Seed.
 This repository is part of a larger effort to explore and enable USB features
 on the Daisy Seed external USB port.
 
+## Important libDaisy USB Fix
+
+Some Daisy Seed USB projects need a small libDaisy-side fix before custom USB
+stacks will link and run correctly: libDaisy's default full-speed USB interrupt
+handlers must be weak so project-owned USB handlers can override them.
+
+This repo includes the reference patch material in `libdaisy-patch/`. Apply
+that fix to libDaisy when a project provides its own `OTG_FS_*` interrupt
+handlers; otherwise you can hit duplicate-symbol errors or accidentally link
+against the wrong USB owner.
+
+For the composite `usb-comp` path, also verify that `hUsbDeviceFS`,
+`hUsbDeviceHS`, and `hpcd_USB_OTG_HS` come from this repo's local
+`usbd_conf.o`, not from `libDaisy/build/libdaisy.a(usb.o)`.
+
 ## Current Projects
 
 - `example-comp` - internal-flash app that reuses the shared `usb-comp` stack.
